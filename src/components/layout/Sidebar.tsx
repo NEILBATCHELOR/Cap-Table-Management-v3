@@ -12,6 +12,7 @@ import {
   Wallet,
   FileCheck,
   Shield,
+  Coins,
 } from "lucide-react";
 
 interface SidebarItemProps {
@@ -92,6 +93,7 @@ const Sidebar = () => {
             href="/captable/compliance"
             active={pathname === "/captable/compliance"}
           />
+
           <SidebarItem
             icon={<BarChart3 className="h-4 w-4" />}
             label="Reports"

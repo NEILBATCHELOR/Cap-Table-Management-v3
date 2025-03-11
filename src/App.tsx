@@ -4,6 +4,7 @@ import Home from "./components/home";
 import Dashboard from "./components/dashboard/Dashboard";
 import InvestorsList from "./components/investors/InvestorsList";
 import ReportsDashboard from "./components/reports/ReportsDashboard";
+import TokenBuilder from "./components/tokens/TokenBuilder";
 import MainLayout from "./components/layout/MainLayout";
 import CapTableManagerNew from "./components/captable/CapTableManagerNew";
 import routes from "tempo-routes";
@@ -98,6 +99,10 @@ function App() {
             {/* Other routes */}
             <Route path="/investors" element={<InvestorsList />} />
             <Route path="/reports" element={<ReportsDashboard />} />
+            <Route
+              path="/projects/:projectId/tokens"
+              element={<TokenBuilder />}
+            />
           </Route>
         </Routes>
         {import.meta.env.VITE_TEMPO === "true" && useRoutes(routes)}

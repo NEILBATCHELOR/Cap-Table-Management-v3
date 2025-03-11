@@ -55,6 +55,7 @@ import {
   Users,
   User,
   Upload,
+  UserCheck,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { getAllInvestorTypes, getInvestorTypeName } from "@/lib/investorTypes";
@@ -78,6 +79,9 @@ import {
 import InvestorDialog from "./InvestorDialog";
 import BulkInvestorUpload from "./BulkInvestorUpload";
 import ProjectSelectionDialog from "./ProjectSelectionDialog";
+import BatchScreeningDialog from "./BatchScreeningDialog";
+import ManageGroupsDialog from "./ManageGroupsDialog";
+import KycStatusBadge from "./KycStatusBadge";
 import {
   Dialog,
   DialogContent,
@@ -99,6 +103,8 @@ const InvestorsList = () => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isInvestorDetailsOpen, setIsInvestorDetailsOpen] = useState(false);
   const [isProjectSelectionOpen, setIsProjectSelectionOpen] = useState(false);
+  const [isScreeningDialogOpen, setIsScreeningDialogOpen] = useState(false);
+  const [isManageGroupsOpen, setIsManageGroupsOpen] = useState(false);
   const [currentInvestor, setCurrentInvestor] = useState<any>(null);
   const [selectedInvestors, setSelectedInvestors] = useState<string[]>([]);
   const [selectAll, setSelectAll] = useState(false);
@@ -321,34 +327,6 @@ const InvestorsList = () => {
     }
   };
 
-  // Get KYC status badge
-  const getKycStatusBadge = (status: string) => {
-    switch (status) {
-      case "approved":
-        return <Badge className="bg-green-100 text-green-800">Approved</Badge>;
-      case "pending":
-        return <Badge className="bg-yellow-100 text-yellow-800">Pending</Badge>;
-      case "failed":
-        return <Badge className="bg-red-100 text-red-800">Failed</Badge>;
-      case "not_started":
-        return <Badge className="bg-gray-100 text-gray-800">Not Started</Badge>;
-      case "expired":
-        return <Badge className="bg-orange-100 text-orange-800">Expired</Badge>;
-      default:
-        return <Badge>{status}</Badge>;
-    }
-  };
-
-  // Generate random ETH wallet address
-  const generateWalletAddress = () => {
-    const hexChars = "0123456789abcdef";
-    let address = "0x";
-    for (let i = 0; i < 40; i++) {
-      address += hexChars.charAt(Math.floor(Math.random() * hexChars.length));
-    }
-    return address;
-  };
-
   // Handle investor selection
   const handleSelectInvestor = (investorId: string, isSelected: boolean) => {
     if (isSelected) {
@@ -562,6 +540,32 @@ const InvestorsList = () => {
     } finally {
       setIsProcessing(false);
     }
+  };
+
+  // Handle KYC/AML screening
+  const handleScreeningClick = () => {
+    if (selectedInvestors.length === 0) {
+      toast({
+        title: "No investors selected",
+        description:
+          "Please select at least one investor for KYC/AML screening",
+        variant: "destructive",
+      });
+      return;
+    }
+    setIsScreeningDialogOpen(true);
+  };
+
+  // Handle screening completion
+  const handleScreeningComplete = async () => {
+    // Refresh the investors list to show updated KYC statuses
+    await fetchInvestors();
+    setSelectedInvestors([]);
+    setIsScreeningDialogOpen(false);
+    toast({
+      title: "Screening Complete",
+      description: "KYC/AML screening process completed successfully",
+    });
   };
 
   // Handle export to CSV
@@ -1018,6 +1022,22 @@ const InvestorsList = () => {
                     )}
                   </Button>
                   <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsManageGroupsOpen(true)}
+                    disabled={isProcessing}
+                  >
+                    <Users className="h-4 w-4 mr-1" /> Manage Groups
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleScreeningClick}
+                    className="text-blue-600"
+                  >
+                    <UserCheck className="h-4 w-4 mr-1" /> KYC/AML Screening
+                  </Button>
+                  <Button
                     variant="destructive"
                     size="sm"
                     onClick={handleBulkDelete}
@@ -1172,7 +1192,7 @@ const InvestorsList = () => {
                             {getInvestorTypeName(investor.type)}
                           </TableCell>
                           <TableCell>
-                            {getKycStatusBadge(investor.kycStatus)}
+                            <KycStatusBadge status={investor.kycStatus} />
                           </TableCell>
                           <TableCell className="max-w-[150px] truncate">
                             {investor.wallet_address ? (
@@ -1202,6 +1222,17 @@ const InvestorsList = () => {
                                 }
                               >
                                 <Eye className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                title="KYC/AML Screening"
+                                onClick={() => {
+                                  setSelectedInvestors([investor.id]);
+                                  setIsScreeningDialogOpen(true);
+                                }}
+                              >
+                                <UserCheck className="h-4 w-4 text-blue-500" />
                               </Button>
                               <Button
                                 variant="ghost"
@@ -1424,7 +1455,9 @@ const InvestorsList = () => {
                   <h3 className="text-sm font-medium text-muted-foreground mb-1">
                     KYC Status
                   </h3>
-                  <div>{getKycStatusBadge(currentInvestor.kycStatus)}</div>
+                  <div>
+                    <KycStatusBadge status={currentInvestor.kycStatus} />
+                  </div>
                 </div>
                 <div>
                   <h3 className="text-sm font-medium text-muted-foreground mb-1">
@@ -1573,6 +1606,32 @@ const InvestorsList = () => {
           </DialogContent>
         </Dialog>
       )}
+
+      {/* KYC/AML Screening Dialog */}
+      <BatchScreeningDialog
+        open={isScreeningDialogOpen}
+        onOpenChange={setIsScreeningDialogOpen}
+        selectedInvestors={investors.filter((investor) =>
+          selectedInvestors.includes(investor.id),
+        )}
+        onScreeningComplete={handleScreeningComplete}
+      />
+
+      {/* Manage Groups Dialog */}
+      <ManageGroupsDialog
+        open={isManageGroupsOpen}
+        onOpenChange={setIsManageGroupsOpen}
+        selectedInvestors={investors.filter((investor) =>
+          selectedInvestors.includes(investor.id),
+        )}
+        onComplete={() => {
+          fetchInvestors();
+          toast({
+            title: "Success",
+            description: "Investor groups updated successfully",
+          });
+        }}
+      />
     </>
   );
 };
