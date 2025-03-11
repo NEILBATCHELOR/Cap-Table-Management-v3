@@ -36,6 +36,7 @@ import {
   ChevronLeft,
   ChevronRight,
   AlertCircle,
+  Download,
 } from "lucide-react";
 import {
   Table,
@@ -67,6 +68,7 @@ import SubscriptionDialog from "./SubscriptionDialog";
 import SubscriptionUploadDialog from "./SubscriptionUploadDialog";
 import SubscriptionConfirmationDialog from "./SubscriptionConfirmationDialog";
 import BulkStatusUpdateDialog from "./BulkStatusUpdateDialog";
+import SubscriptionExportDialog from "./SubscriptionExportDialog";
 import { v4 as uuidv4 } from "uuid";
 
 interface SubscriptionManagerProps {
@@ -85,6 +87,7 @@ const SubscriptionManager = ({ projectId }: SubscriptionManagerProps) => {
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
   const [isBulkStatusUpdateOpen, setIsBulkStatusUpdateOpen] = useState(false);
+  const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
 
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [subscriptionToDelete, setSubscriptionToDelete] = useState<
@@ -223,15 +226,21 @@ const SubscriptionManager = ({ projectId }: SubscriptionManagerProps) => {
     return 0;
   });
 
-  // Paginate the sorted subscriptions
+  // Pagination
+  const totalPages = Math.ceil(sortedSubscriptions.length / rowsPerPage);
   const paginatedSubscriptions = sortedSubscriptions.slice(
     (currentPage - 1) * rowsPerPage,
     currentPage * rowsPerPage,
   );
 
-  // Calculate total pages
-  const totalPages = Math.ceil(sortedSubscriptions.length / rowsPerPage);
+  // Handle select all checkbox - simplified to avoid circular dependencies
+  const handleSelectAll = (checked: boolean) => {
+    setSelectedSubscriptionIds(
+      checked ? paginatedSubscriptions.map((sub) => sub.id) : [],
+    );
+  };
 
+  // Handle select subscription
   const handleSelectSubscription = (
     subscriptionId: string,
     isSelected: boolean,
@@ -240,12 +249,6 @@ const SubscriptionManager = ({ projectId }: SubscriptionManagerProps) => {
       isSelected
         ? [...prev, subscriptionId]
         : prev.filter((id) => id !== subscriptionId),
-    );
-  };
-
-  const handleSelectAll = (isSelected: boolean) => {
-    setSelectedSubscriptionIds(
-      isSelected ? paginatedSubscriptions.map((sub) => sub.id) : [],
     );
   };
 
@@ -574,6 +577,115 @@ const SubscriptionManager = ({ projectId }: SubscriptionManagerProps) => {
     }
   };
 
+  // Handle export subscriptions
+  const handleExportSubscriptions = async (options: any) => {
+    try {
+      // Determine which subscriptions to export
+      const subscriptionsToExport =
+        options.exportType === "selected"
+          ? sortedSubscriptions.filter((sub) =>
+              selectedSubscriptionIds.includes(sub.id),
+            )
+          : sortedSubscriptions;
+
+      if (subscriptionsToExport.length === 0) {
+        toast({
+          title: "No Data",
+          description: "No subscriptions to export",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Create headers based on selected options
+      const headers = ["Subscription ID", "Date", "Currency", "Amount"];
+
+      if (options.includeInvestorDetails) {
+        headers.push("Investor Name", "Investor Email", "Wallet Address");
+      }
+
+      if (options.includeStatus) {
+        headers.push("Confirmed", "Allocated", "Distributed");
+      }
+
+      // Create CSV content
+      const csvContent = [
+        headers.join(","),
+        ...subscriptionsToExport.map((subscription) => {
+          const row = [
+            `"${subscription.subscription_id}"`,
+            `"${new Date(subscription.subscription_date).toLocaleDateString()}"`,
+            `"${subscription.currency}"`,
+            subscription.fiat_amount,
+          ];
+
+          if (options.includeInvestorDetails) {
+            row.push(
+              `"${subscription.investor.name}"`,
+              `"${subscription.investor.email}"`,
+              `"${subscription.investor.wallet_address || ""}"`,
+            );
+          }
+
+          if (options.includeStatus) {
+            row.push(
+              subscription.confirmed ? "Yes" : "No",
+              subscription.allocated ? "Yes" : "No",
+              subscription.distributed ? "Yes" : "No",
+            );
+          }
+
+          return row.join(",");
+        }),
+      ].join("\n");
+
+      // Create and download the file
+      if (options.fileFormat === "csv") {
+        const blob = new Blob([csvContent], {
+          type: "text/csv;charset=utf-8;",
+        });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.setAttribute("href", url);
+        link.setAttribute(
+          "download",
+          `subscriptions_export_${new Date().toISOString().split("T")[0]}.csv`,
+        );
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } else {
+        // For Excel, we'd normally use a library like xlsx
+        // For simplicity, we'll just use CSV with an .xlsx extension
+        const blob = new Blob([csvContent], {
+          type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=utf-8;",
+        });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.setAttribute("href", url);
+        link.setAttribute(
+          "download",
+          `subscriptions_export_${new Date().toISOString().split("T")[0]}.xlsx`,
+        );
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+
+      toast({
+        title: "Success",
+        description: `${subscriptionsToExport.length} subscriptions exported successfully`,
+      });
+    } catch (err) {
+      console.error("Error exporting subscriptions:", err);
+      toast({
+        title: "Error",
+        description: "Failed to export subscriptions. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const formatCurrency = (amount: number, currency: string) =>
     new Intl.NumberFormat("en-US", {
       style: "currency",
@@ -584,7 +696,7 @@ const SubscriptionManager = ({ projectId }: SubscriptionManagerProps) => {
 
   return (
     <div className="w-full h-full bg-gray-50 p-6 space-y-6">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
         <div>
           <h1 className="text-2xl font-bold">Subscription Management</h1>
           <p className="text-sm text-muted-foreground">
@@ -608,6 +720,14 @@ const SubscriptionManager = ({ projectId }: SubscriptionManagerProps) => {
           >
             <Upload className="h-4 w-4" />
             <span>Upload Subscriptions</span>
+          </Button>
+          <Button
+            variant="outline"
+            className="flex items-center gap-2"
+            onClick={() => setIsExportDialogOpen(true)}
+          >
+            <Download className="h-4 w-4" />
+            <span>Export</span>
           </Button>
           <Button
             className="flex items-center gap-2"
@@ -1291,6 +1411,40 @@ const SubscriptionManager = ({ projectId }: SubscriptionManagerProps) => {
         onConfirm={handleConfirmSubscriptions}
       />
 
+      {/* Export Dialog */}
+      <SubscriptionExportDialog
+        open={isExportDialogOpen}
+        onOpenChange={setIsExportDialogOpen}
+        onExport={handleExportSubscriptions}
+        selectedCount={selectedSubscriptionIds.length}
+        totalCount={sortedSubscriptions.length}
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Subscription</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this subscription? This action
+              cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDeleteSubscription}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* Bulk Status Update Dialog */}
       <BulkStatusUpdateDialog
         open={isBulkStatusUpdateOpen}
@@ -1352,31 +1506,6 @@ const SubscriptionManager = ({ projectId }: SubscriptionManagerProps) => {
           }
         }}
       />
-
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog
-        open={isDeleteDialogOpen}
-        onOpenChange={setIsDeleteDialogOpen}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Subscription</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete this subscription? This action
-              cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={confirmDeleteSubscription}
-              className="bg-red-600 hover:bg-red-700"
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 };

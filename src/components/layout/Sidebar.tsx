@@ -85,24 +85,7 @@ const Sidebar = () => {
             href="/captable/investors"
             active={pathname === "/captable/investors"}
           />
-          <SidebarItem
-            icon={<FileText className="h-4 w-4" />}
-            label="Subscriptions"
-            href="/captable/subscriptions"
-            active={pathname === "/captable/subscriptions"}
-          />
-          <SidebarItem
-            icon={<Wallet className="h-4 w-4" />}
-            label="Token Allocations"
-            href="/captable/allocations"
-            active={pathname === "/captable/allocations"}
-          />
-          <SidebarItem
-            icon={<FileCheck className="h-4 w-4" />}
-            label="Distributions"
-            href="/captable/distributions"
-            active={pathname === "/captable/distributions"}
-          />
+
           <SidebarItem
             icon={<Shield className="h-4 w-4" />}
             label="Compliance"

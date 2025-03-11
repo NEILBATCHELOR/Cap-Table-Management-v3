@@ -10,11 +10,13 @@ import {
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/lib/supabase";
-import { Search, RefreshCw, Plus, Upload, Edit } from "lucide-react";
+import { Search, RefreshCw, Plus, Upload, Edit, Download } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import TokenAllocationTable from "./TokenAllocationTable";
 import AllocationConfirmationDialog from "./AllocationConfirmationDialog";
 import TokenAllocationForm from "./TokenAllocationForm";
+import TokenAllocationUploadDialog from "./TokenAllocationUploadDialog";
+import TokenAllocationExportDialog from "./TokenAllocationExportDialog";
 import BulkStatusUpdateDialog from "./BulkStatusUpdateDialog";
 
 interface TokenAllocationManagerProps {
@@ -36,6 +38,7 @@ const TokenAllocationManager = ({
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
   const [isAllocationFormOpen, setIsAllocationFormOpen] = useState(false);
   const [isAllocationUploadOpen, setIsAllocationUploadOpen] = useState(false);
+  const [isAllocationExportOpen, setIsAllocationExportOpen] = useState(false);
   const [isBulkStatusUpdateOpen, setIsBulkStatusUpdateOpen] = useState(false);
   const { toast } = useToast();
 
@@ -148,26 +151,47 @@ const TokenAllocationManager = ({
   };
 
   // Handle update allocation
-  const handleUpdateAllocation = async (id: string, amount: number) => {
+  const handleUpdateAllocation = async (
+    id: string,
+    amount: number,
+    status?: boolean,
+  ) => {
     try {
       // Find the allocation
       const allocation = allocations.find((a) => a.id === id);
       if (!allocation) return;
 
-      // Update token allocation amount
+      // Update token allocation amount and status if provided
+      const updates: Record<string, any> = {
+        token_amount: amount,
+        updated_at: new Date().toISOString(),
+      };
+
+      // If status is provided, update allocation_date accordingly
+      if (status !== undefined) {
+        updates.allocation_date = status ? new Date().toISOString() : null;
+      }
+
       const { error } = await supabase
         .from("token_allocations")
-        .update({
-          token_amount: amount,
-          updated_at: new Date().toISOString(),
-        })
+        .update(updates)
         .eq("id", id);
 
       if (error) throw error;
 
       // Update local state
       setAllocations((prev) =>
-        prev.map((a) => (a.id === id ? { ...a, allocatedAmount: amount } : a)),
+        prev.map((a) => {
+          if (a.id === id) {
+            const updated = { ...a, allocatedAmount: amount };
+            // Update allocation confirmation status if provided
+            if (status !== undefined) {
+              updated.allocationConfirmed = status;
+            }
+            return updated;
+          }
+          return a;
+        }),
       );
 
       // No need to recalculate token summaries
@@ -235,6 +259,121 @@ const TokenAllocationManager = ({
   };
 
   // Removed handleMintTokens function as it's now in TokenMintingManager
+
+  // Handle export token allocations
+  const handleExportAllocations = async (options: any) => {
+    try {
+      // Determine which allocations to export
+      const allocationsToExport =
+        options.exportType === "selected"
+          ? filteredAllocations.filter((allocation) =>
+              selectedAllocationIds.includes(allocation.id),
+            )
+          : filteredAllocations;
+
+      if (allocationsToExport.length === 0) {
+        toast({
+          title: "No Data",
+          description: "No allocations to export",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Create headers based on selected options
+      const headers = ["Token Type", "Allocated Amount"];
+
+      if (options.includeInvestorDetails) {
+        headers.push("Investor Name", "Investor Email", "Wallet Address");
+      }
+
+      if (options.includeSubscriptionDetails) {
+        headers.push("Subscription ID", "Currency", "Subscription Amount");
+      }
+
+      if (options.includeStatus) {
+        headers.push("Confirmed", "Distributed");
+      }
+
+      // Create CSV content
+      const csvContent = [
+        headers.join(","),
+        ...allocationsToExport.map((allocation) => {
+          const row = [`"${allocation.tokenType}"`, allocation.allocatedAmount];
+
+          if (options.includeInvestorDetails) {
+            row.push(
+              `"${allocation.investorName}"`,
+              `"${allocation.investorEmail}"`,
+              `"${allocation.walletAddress || ""}"`,
+            );
+          }
+
+          if (options.includeSubscriptionDetails) {
+            row.push(
+              `"${allocation.subscriptionId}"`,
+              `"${allocation.currency}"`,
+              allocation.fiatAmount,
+            );
+          }
+
+          if (options.includeStatus) {
+            row.push(
+              allocation.allocationConfirmed ? "Yes" : "No",
+              allocation.distributed ? "Yes" : "No",
+            );
+          }
+
+          return row.join(",");
+        }),
+      ].join("\n");
+
+      // Create and download the file
+      if (options.fileFormat === "csv") {
+        const blob = new Blob([csvContent], {
+          type: "text/csv;charset=utf-8;",
+        });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.setAttribute("href", url);
+        link.setAttribute(
+          "download",
+          `token_allocations_export_${new Date().toISOString().split("T")[0]}.csv`,
+        );
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } else {
+        // For Excel, we'd normally use a library like xlsx
+        // For simplicity, we'll just use CSV with an .xlsx extension
+        const blob = new Blob([csvContent], {
+          type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=utf-8;",
+        });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.setAttribute("href", url);
+        link.setAttribute(
+          "download",
+          `token_allocations_export_${new Date().toISOString().split("T")[0]}.xlsx`,
+        );
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+
+      toast({
+        title: "Success",
+        description: `${allocationsToExport.length} token allocations exported successfully`,
+      });
+    } catch (err) {
+      console.error("Error exporting token allocations:", err);
+      toast({
+        title: "Error",
+        description: "Failed to export token allocations. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
 
   // Handle delete allocation
   const handleDeleteAllocation = async (id: string) => {
@@ -334,12 +473,75 @@ const TokenAllocationManager = ({
   // Handle bulk upload of token allocations
   const handleUploadTokenAllocations = async (allocationsData: any[]) => {
     try {
-      // Implementation for bulk upload
+      if (!projectId) {
+        toast({
+          title: "Error",
+          description: "Project ID is required. Please select a project first.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setIsLoading(true);
+      const now = new Date().toISOString();
+      let successCount = 0;
+
+      for (const allocation of allocationsData) {
+        try {
+          // Get subscription details
+          const { data: subscriptionData, error: subscriptionError } =
+            await supabase
+              .from("subscriptions")
+              .select("id, investor_id")
+              .eq("subscription_id", allocation.subscription_id)
+              .eq("project_id", projectId)
+              .single();
+
+          if (subscriptionError) {
+            console.error(
+              `Subscription not found: ${allocation.subscription_id}`,
+            );
+            continue;
+          }
+
+          // Create token allocation
+          const { error: insertError } = await supabase
+            .from("token_allocations")
+            .insert({
+              subscription_id: subscriptionData.id,
+              investor_id: subscriptionData.investor_id,
+              project_id: projectId,
+              token_type: allocation.token_type,
+              token_amount: allocation.token_amount,
+              created_at: now,
+              updated_at: now,
+            });
+
+          if (insertError) {
+            console.error("Error inserting allocation:", insertError);
+            continue;
+          }
+
+          // Update subscription to mark as allocated
+          await supabase
+            .from("subscriptions")
+            .update({ allocated: true, updated_at: now })
+            .eq("id", subscriptionData.id);
+
+          successCount++;
+        } catch (err) {
+          console.error("Error processing allocation:", err);
+        }
+      }
+
       toast({
         title: "Success",
-        description: `${allocationsData.length} token allocations uploaded successfully`,
+        description: `${successCount} of ${allocationsData.length} token allocations uploaded successfully`,
       });
       setIsAllocationUploadOpen(false);
+
+      // Refresh allocations
+      fetchAllocations();
     } catch (err) {
       console.error("Error uploading token allocations:", err);
       toast({
@@ -347,6 +549,8 @@ const TokenAllocationManager = ({
         description: "Failed to upload token allocations. Please try again.",
         variant: "destructive",
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -380,6 +584,14 @@ const TokenAllocationManager = ({
           >
             <Upload className="h-4 w-4" />
             <span>Bulk Upload</span>
+          </Button>
+          <Button
+            variant="outline"
+            className="flex items-center gap-2"
+            onClick={() => setIsAllocationExportOpen(true)}
+          >
+            <Download className="h-4 w-4" />
+            <span>Export</span>
           </Button>
           <Button
             className="flex items-center gap-2"
@@ -433,7 +645,22 @@ const TokenAllocationManager = ({
           }))}
       />
 
-      {/* Removed Token Minting Dialog as it's now in TokenMintingManager */}
+      {/* Token Allocation Upload Dialog */}
+      <TokenAllocationUploadDialog
+        open={isAllocationUploadOpen}
+        onOpenChange={setIsAllocationUploadOpen}
+        onUploadComplete={handleUploadTokenAllocations}
+        projectId={projectId}
+      />
+
+      {/* Token Allocation Export Dialog */}
+      <TokenAllocationExportDialog
+        open={isAllocationExportOpen}
+        onOpenChange={setIsAllocationExportOpen}
+        onExport={handleExportAllocations}
+        selectedCount={selectedAllocationIds.length}
+        totalCount={filteredAllocations.length}
+      />
 
       {/* Token Allocation Form */}
       <TokenAllocationForm

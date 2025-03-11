@@ -78,18 +78,61 @@ const CapTableDashboard = ({
     try {
       setIsLoading(true);
 
-      // In a real implementation, these would be actual database queries
-      // For now, we'll simulate with mock data
+      if (!currentProjectId) {
+        return;
+      }
 
-      // Simulate a delay
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      // Get total investors count for this project
+      const { count: investorsCount, error: investorsError } = await supabase
+        .from("subscriptions")
+        .select("investor_id", { count: "exact", head: true })
+        .eq("project_id", currentProjectId);
+
+      if (investorsError) throw investorsError;
+
+      // Get total subscriptions count
+      const { count: subscriptionsCount, error: subscriptionsError } =
+        await supabase
+          .from("subscriptions")
+          .select("id", { count: "exact", head: true })
+          .eq("project_id", currentProjectId);
+
+      if (subscriptionsError) throw subscriptionsError;
+
+      // Get confirmed allocations count
+      const { count: allocatedCount, error: allocatedError } = await supabase
+        .from("token_allocations")
+        .select("id", { count: "exact", head: true })
+        .eq("project_id", currentProjectId)
+        .not("allocation_date", "is", null);
+
+      if (allocatedError) throw allocatedError;
+
+      // Get distributed tokens count
+      const { count: distributedCount, error: distributedError } =
+        await supabase
+          .from("token_allocations")
+          .select("id", { count: "exact", head: true })
+          .eq("project_id", currentProjectId)
+          .eq("distributed", true);
+
+      if (distributedError) throw distributedError;
+
+      // Get pending compliance reviews count
+      const { count: complianceCount, error: complianceError } = await supabase
+        .from("compliance_checks")
+        .select("id", { count: "exact", head: true })
+        .eq("project_id", currentProjectId)
+        .eq("status", "pending");
+
+      if (complianceError) throw complianceError;
 
       setStats({
-        totalInvestors: 24,
-        totalSubscriptions: 32,
-        totalAllocated: 18,
-        totalDistributed: 12,
-        pendingCompliance: 3,
+        totalInvestors: investorsCount || 0,
+        totalSubscriptions: subscriptionsCount || 0,
+        totalAllocated: allocatedCount || 0,
+        totalDistributed: distributedCount || 0,
+        pendingCompliance: complianceCount || 0,
       });
     } catch (err) {
       console.error("Error fetching cap table stats:", err);

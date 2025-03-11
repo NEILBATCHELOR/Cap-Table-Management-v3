@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import { supabase } from "@/lib/supabase";
 import {
   Loader2,
   CheckCircle,
@@ -99,9 +100,11 @@ const TokenAllocationTable = ({
         (sum, a) => sum + (a.allocatedAmount || 0),
         0,
       );
+      // Count allocations that have been confirmed (subscription confirmed)
       const confirmedCount = allocations.filter((a) => a.confirmed).length;
+      // Count allocations that have been allocation-confirmed (allocation_date is set)
       const allocationConfirmedCount = allocations.filter(
-        (a) => a.allocationConfirmed,
+        (a) => a.allocationConfirmed === true,
       ).length;
 
       return {
@@ -171,7 +174,7 @@ const TokenAllocationTable = ({
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Confirmed:</span>
                 <span>
-                  {summary.confirmedCount} / {summary.count}
+                  {summary.allocationConfirmedCount} / {summary.count}
                 </span>
               </div>
             </div>
@@ -328,13 +331,15 @@ const TokenAllocationTable = ({
                               })
                               .eq("id", allocation.id)
                               .then(() => {
-                                // Update local state
+                                // Update local state with both amount and status
                                 onUpdateAllocation(
                                   allocation.id,
                                   allocation.allocatedAmount,
+                                  newStatus === "confirmed",
                                 );
 
-                                // Update confirmation status in local state
+                                // Update the allocation status in the parent component
+                                // This will trigger a re-render of the token type summary cards
                                 const updatedAllocations = allocations.map(
                                   (a) =>
                                     a.id === allocation.id
@@ -346,8 +351,10 @@ const TokenAllocationTable = ({
                                       : a,
                                 );
 
-                                // We can't directly update the allocations state here
-                                // so we'll rely on the parent component to refresh
+                                // Force a re-render of the component
+                                onSelectAll(
+                                  selectedIds.length === allocations.length,
+                                );
 
                                 setEditingId(null);
                               })

@@ -173,22 +173,18 @@ const TokenAllocationForm = ({
 
   // Add a new token allocation field
   const addTokenAllocation = () => {
-    const allocations = form.getValues("allocations") || [];
-    form.setValue("allocations", [
-      ...allocations,
-      { token_type: "ERC-20", token_amount: 0 },
-    ]);
+    const currentAllocations = [...form.getValues("allocations")] || [];
+    currentAllocations.push({ token_type: "ERC-20", token_amount: 0 });
+    form.setValue("allocations", currentAllocations, { shouldDirty: true });
   };
 
   // Remove a token allocation field
   const removeTokenAllocation = (index: number) => {
-    const allocations = form.getValues("allocations") || [];
-    if (allocations.length <= 1) return; // Keep at least one allocation
+    const currentAllocations = [...form.getValues("allocations")] || [];
+    if (currentAllocations.length <= 1) return; // Keep at least one allocation
 
-    form.setValue(
-      "allocations",
-      allocations.filter((_, i) => i !== index),
-    );
+    currentAllocations.splice(index, 1);
+    form.setValue("allocations", currentAllocations, { shouldDirty: true });
   };
 
   // Handle form submission
@@ -362,17 +358,10 @@ const TokenAllocationForm = ({
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <h3 className="text-sm font-medium">Token Allocations</h3>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={addTokenAllocation}
-                  >
-                    <Plus className="h-4 w-4 mr-1" /> Add Token Type
-                  </Button>
+                  {/* Add Token Type button removed, but functionality preserved */}
                 </div>
 
-                {form.getValues("allocations").map((_, index) => (
+                {form.watch("allocations").map((_, index) => (
                   <div key={index} className="flex items-end gap-2">
                     <FormField
                       control={form.control}
@@ -427,16 +416,28 @@ const TokenAllocationForm = ({
                       )}
                     />
 
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => removeTokenAllocation(index)}
-                      disabled={form.getValues("allocations").length <= 1}
-                      className="mb-2"
-                    >
-                      <Trash className="h-4 w-4 text-red-500" />
-                    </Button>
+                    <div className="flex items-center gap-1 mb-2">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => removeTokenAllocation(index)}
+                        disabled={form.watch("allocations").length <= 1}
+                      >
+                        <Trash className="h-4 w-4 text-red-500" />
+                      </Button>
+                      {index === form.watch("allocations").length - 1 && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={addTokenAllocation}
+                          title="Add another token type"
+                        >
+                          <Plus className="h-4 w-4 text-blue-500" />
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
