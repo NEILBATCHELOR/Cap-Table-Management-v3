@@ -35,13 +35,20 @@ const TokenMintingManager = ({
   // Fetch data when component mounts
   useEffect(() => {
     if (projectId) {
+      console.log(
+        "TokenMintingManager: Fetching allocations for project ID:",
+        projectId,
+      );
       fetchTokenAllocations();
+    } else {
+      console.warn("TokenMintingManager: No project ID provided");
     }
   }, [projectId]);
 
   const fetchTokenAllocations = async () => {
     try {
       setIsLoading(true);
+      console.log("Fetching token allocations for project ID:", projectId);
 
       // Fetch token allocations from the database
       const { data, error } = await supabase
@@ -57,11 +64,17 @@ const TokenMintingManager = ({
           distribution_date,
           distribution_tx_hash,
           allocation_date,
+          minted,
+          minting_date,
+          minting_tx_hash,
+          project_id,
           subscriptions!inner(confirmed, allocated),
           investors!inner(name, email, wallet_address)
         `,
         )
         .eq("project_id", projectId);
+
+      console.log("Token allocations query result:", { data, error });
 
       if (error) throw error;
 
@@ -95,6 +108,14 @@ const TokenMintingManager = ({
             0,
           );
 
+          const mintedAllocations = allocations.filter(
+            (a) => a.minted === true,
+          );
+          const mintedAmount = mintedAllocations.reduce(
+            (sum, a) => sum + (a.token_amount || 0),
+            0,
+          );
+
           const distributedAllocations = allocations.filter(
             (a) => a.distributed,
           );
@@ -108,12 +129,20 @@ const TokenMintingManager = ({
             totalAmount,
             confirmedAmount,
             distributedAmount,
+            mintedAmount,
             totalCount: allocations.length,
             confirmedCount: confirmedAllocations.length,
             distributedCount: distributedAllocations.length,
+            mintedCount: mintedAllocations.length,
             status:
-              confirmedAllocations.length > 0 ? "ready_to_mint" : "pending",
-            readyToMint: confirmedAllocations.length > 0,
+              mintedAllocations.length > 0
+                ? "minted"
+                : confirmedAllocations.length > 0
+                  ? "ready_to_mint"
+                  : "pending",
+            readyToMint:
+              confirmedAllocations.length > 0 && mintedAllocations.length === 0,
+            isMinted: mintedAllocations.length > 0,
             allocations: allocations,
           };
         },
@@ -141,7 +170,35 @@ const TokenMintingManager = ({
   const handleMintTokens = async (tokenTypes: string[]) => {
     try {
       // In a real implementation, this would interact with a blockchain
-      // For now, we'll just update the UI state
+      // For now, we'll update the database to mark tokens as minted
+      const now = new Date().toISOString();
+
+      // For each token type, update the allocations to mark them as minted
+      for (const tokenType of tokenTypes) {
+        // Find all allocations for this token type
+        const allocationsForType =
+          tokenSummaries.find((summary) => summary.tokenType === tokenType)
+            ?.allocations || [];
+
+        // Get the IDs of these allocations
+        const allocationIds = allocationsForType.map((a) => a.id);
+
+        if (allocationIds.length > 0) {
+          // Update the allocations in the database to mark them as minted
+          const { error } = await supabase
+            .from("token_allocations")
+            .update({
+              minted: true,
+              minting_date: now,
+              minting_tx_hash: `0x${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`,
+              updated_at: now,
+            })
+            .in("id", allocationIds);
+
+          if (error) throw error;
+        }
+      }
+
       toast({
         title: "Tokens Minted",
         description: `Successfully minted ${tokenTypes.length} token type(s).`,
@@ -219,7 +276,9 @@ const TokenMintingManager = ({
               <CardHeader className="pb-2">
                 <div className="flex justify-between items-start">
                   <CardTitle className="text-lg">{summary.tokenType}</CardTitle>
-                  {summary.readyToMint ? (
+                  {summary.isMinted ? (
+                    <Badge className="bg-blue-100 text-blue-800">Minted</Badge>
+                  ) : summary.readyToMint ? (
                     <Badge className="bg-green-100 text-green-800">
                       Ready to Mint
                     </Badge>
@@ -255,6 +314,12 @@ const TokenMintingManager = ({
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
+                      <p className="text-sm text-muted-foreground">Minted</p>
+                      <p className="text-xl font-medium">
+                        {formatNumber(summary.mintedAmount)}
+                      </p>
+                    </div>
+                    <div>
                       <p className="text-sm text-muted-foreground">
                         Distributed
                       </p>
@@ -262,24 +327,18 @@ const TokenMintingManager = ({
                         {formatNumber(summary.distributedAmount)}
                       </p>
                     </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Investors</p>
-                      <p className="text-xl font-medium">
-                        {summary.totalCount}
-                      </p>
-                    </div>
                   </div>
 
                   <Button
                     className="w-full mt-2"
-                    disabled={!summary.readyToMint}
+                    disabled={!summary.readyToMint || summary.isMinted}
                     onClick={() => {
                       setSelectedTokenType(summary.tokenType);
                       setIsMintDialogOpen(true);
                     }}
                   >
                     <Coins className="mr-2 h-4 w-4" />
-                    Mint Tokens
+                    {summary.isMinted ? "Minted" : "Mint Tokens"}
                   </Button>
                 </div>
               </CardContent>

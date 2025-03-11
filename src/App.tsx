@@ -52,6 +52,10 @@ function App() {
               path="/captable/documents"
               element={<CapTableManagerNew section="documents" />}
             />
+            <Route
+              path="/captable/minting"
+              element={<CapTableManagerNew section="minting" />}
+            />
 
             {/* Project-specific Cap Table routes */}
             <Route
@@ -85,6 +89,10 @@ function App() {
             <Route
               path="/projects/:projectId/captable/documents"
               element={<CapTableManagerNew section="documents" />}
+            />
+            <Route
+              path="/projects/:projectId/captable/minting"
+              element={<CapTableManagerNew section="minting" />}
             />
 
             {/* Other routes */}

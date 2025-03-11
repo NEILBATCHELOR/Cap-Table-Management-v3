@@ -10,20 +10,18 @@ import {
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { Coins, Loader2 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-
-interface TokenSummary {
-  tokenType: string;
-  totalAmount: number;
-  status: string;
-}
+import { Coins, Loader2, CheckCircle } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface TokenMintingDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   projectId: string;
-  tokenSummaries: TokenSummary[];
+  tokenSummaries: {
+    tokenType: string;
+    totalAmount: number;
+    status: string;
+  }[];
   onMintComplete: (tokenTypes: string[]) => void;
 }
 
@@ -31,22 +29,25 @@ const TokenMintingDialog = ({
   open,
   onOpenChange,
   projectId,
-  tokenSummaries = [],
+  tokenSummaries,
   onMintComplete,
 }: TokenMintingDialogProps) => {
   const [selectedTokenTypes, setSelectedTokenTypes] = useState<string[]>([]);
-  const [isMinting, setIsMinting] = useState(false);
-  const [confirmationChecked, setConfirmationChecked] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [distributionStep, setDistributionStep] = useState<
+    "select" | "confirm" | "processing" | "complete"
+  >("select");
+  const [confirmChecked, setConfirmChecked] = useState(false);
 
-  // Format currency
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount);
-  };
+  // Reset state when dialog opens
+  React.useEffect(() => {
+    if (open) {
+      setSelectedTokenTypes([]);
+      setDistributionStep("select");
+      setIsProcessing(false);
+      setConfirmChecked(false);
+    }
+  }, [open]);
 
   // Handle token type selection
   const handleTokenTypeSelection = (tokenType: string, isSelected: boolean) => {
@@ -74,25 +75,258 @@ const TokenMintingDialog = ({
 
   // Handle mint tokens
   const handleMintTokens = async () => {
-    if (!confirmationChecked || selectedTokenTypes.length === 0) return;
-
     try {
-      setIsMinting(true);
+      setIsProcessing(true);
+      setDistributionStep("processing");
+
+      // Simulate minting process with a delay
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+
+      // Call the onMintComplete callback
       await onMintComplete(selectedTokenTypes);
-      setSelectedTokenTypes([]);
-      setConfirmationChecked(false);
-      onOpenChange(false);
+
+      // Set minting as complete
+      setDistributionStep("complete");
     } catch (error) {
       console.error("Error minting tokens:", error);
+      // Reset to selection step on error
+      setDistributionStep("select");
     } finally {
-      setIsMinting(false);
+      setIsProcessing(false);
     }
   };
 
-  // Filter token types that are ready to mint
-  const mintableTokenTypes = tokenSummaries.filter(
-    (summary) => summary.status === "ready_to_mint",
-  );
+  // Format number
+  const formatNumber = (amount: number) => {
+    return new Intl.NumberFormat("en-US", {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2,
+    }).format(amount);
+  };
+
+  // Render content based on current step
+  const renderContent = () => {
+    switch (distributionStep) {
+      case "select":
+        return (
+          <div className="space-y-4">
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="select-all"
+                checked={
+                  selectedTokenTypes.length ===
+                    tokenSummaries.filter(
+                      (summary) => summary.status === "ready_to_mint",
+                    ).length &&
+                  tokenSummaries.some(
+                    (summary) => summary.status === "ready_to_mint",
+                  )
+                }
+                onCheckedChange={handleSelectAll}
+                disabled={
+                  !tokenSummaries.some(
+                    (summary) => summary.status === "ready_to_mint",
+                  )
+                }
+              />
+              <Label htmlFor="select-all">Select All Ready Tokens</Label>
+            </div>
+
+            <div className="space-y-2 max-h-[300px] overflow-y-auto">
+              {tokenSummaries.map((summary) => (
+                <div
+                  key={summary.tokenType}
+                  className="flex items-center justify-between p-3 border rounded-md"
+                >
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`token-${summary.tokenType}`}
+                      checked={selectedTokenTypes.includes(summary.tokenType)}
+                      onCheckedChange={(checked) =>
+                        handleTokenTypeSelection(summary.tokenType, !!checked)
+                      }
+                      disabled={summary.status !== "ready_to_mint"}
+                    />
+                    <div>
+                      <Label
+                        htmlFor={`token-${summary.tokenType}`}
+                        className="font-medium"
+                      >
+                        {summary.tokenType}
+                      </Label>
+                      <p className="text-sm text-muted-foreground">
+                        {formatNumber(summary.totalAmount)} tokens
+                      </p>
+                    </div>
+                  </div>
+                  <div>
+                    {summary.status === "minted" ? (
+                      <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                        Minted
+                      </span>
+                    ) : summary.status === "ready_to_mint" ? (
+                      <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
+                        Ready to Mint
+                      </span>
+                    ) : (
+                      <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full">
+                        Pending
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
+
+              {tokenSummaries.length === 0 && (
+                <div className="text-center py-4 text-muted-foreground">
+                  No token types available for minting
+                </div>
+              )}
+            </div>
+          </div>
+        );
+
+      case "confirm":
+        return (
+          <div className="space-y-4">
+            <Alert>
+              <AlertDescription>
+                You are about to mint {selectedTokenTypes.length} token type(s).
+                This action will create the tokens on the blockchain and cannot
+                be undone.
+              </AlertDescription>
+            </Alert>
+
+            <div className="space-y-2 max-h-[200px] overflow-y-auto">
+              <h3 className="text-sm font-medium">Selected Token Types:</h3>
+              <ul className="list-disc list-inside space-y-1">
+                {selectedTokenTypes.map((tokenType) => {
+                  const summary = tokenSummaries.find(
+                    (s) => s.tokenType === tokenType,
+                  );
+                  return (
+                    <li key={tokenType}>
+                      {tokenType} - {formatNumber(summary?.totalAmount || 0)}{" "}
+                      tokens
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+
+            <div className="flex items-center space-x-2 pt-2">
+              <Checkbox
+                id="confirm-mint"
+                checked={confirmChecked}
+                onCheckedChange={(checked) => setConfirmChecked(!!checked)}
+              />
+              <Label htmlFor="confirm-mint">
+                I confirm that I want to mint these tokens and understand this
+                action cannot be reversed
+              </Label>
+            </div>
+          </div>
+        );
+
+      case "processing":
+        return (
+          <div className="space-y-4 text-center py-6">
+            <Loader2 className="h-12 w-12 animate-spin mx-auto text-primary" />
+            <h3 className="text-lg font-medium">Minting Tokens</h3>
+            <p className="text-muted-foreground">
+              Please wait while your tokens are being minted. This process may
+              take a few minutes.
+            </p>
+          </div>
+        );
+
+      case "complete":
+        return (
+          <div className="space-y-4 text-center py-6">
+            <CheckCircle className="h-12 w-12 mx-auto text-green-500" />
+            <h3 className="text-lg font-medium">Minting Complete</h3>
+            <p className="text-muted-foreground">
+              Your tokens have been successfully minted. You can now distribute
+              them to investors.
+            </p>
+          </div>
+        );
+
+      default:
+        return null;
+    }
+  };
+
+  // Render footer based on current step
+  const renderFooter = () => {
+    switch (distributionStep) {
+      case "select":
+        return (
+          <>
+            <Button
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={isProcessing}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => setDistributionStep("confirm")}
+              disabled={
+                selectedTokenTypes.length === 0 || isProcessing || !projectId
+              }
+            >
+              <Coins className="mr-2 h-4 w-4" />
+              Continue to Mint
+            </Button>
+          </>
+        );
+
+      case "confirm":
+        return (
+          <>
+            <Button
+              variant="outline"
+              onClick={() => setDistributionStep("select")}
+              disabled={isProcessing}
+            >
+              Back
+            </Button>
+            <Button
+              onClick={handleMintTokens}
+              disabled={isProcessing || !confirmChecked}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              {isProcessing ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Minting...
+                </>
+              ) : (
+                <>
+                  <Coins className="mr-2 h-4 w-4" />
+                  Mint Tokens
+                </>
+              )}
+            </Button>
+          </>
+        );
+
+      case "processing":
+        return (
+          <Button disabled={true}>
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            Minting in Progress...
+          </Button>
+        );
+
+      case "complete":
+        return <Button onClick={() => onOpenChange(false)}>Close</Button>;
+
+      default:
+        return null;
+    }
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -103,138 +337,13 @@ const TokenMintingDialog = ({
             <span>Mint Tokens</span>
           </DialogTitle>
           <DialogDescription>
-            Mint tokens for confirmed allocations
+            Select token types to mint for confirmed allocations
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-medium">Available Token Types</h3>
-            {mintableTokenTypes.length > 0 && (
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="select-all"
-                  checked={
-                    selectedTokenTypes.length === mintableTokenTypes.length &&
-                    mintableTokenTypes.length > 0
-                  }
-                  onCheckedChange={handleSelectAll}
-                />
-                <Label htmlFor="select-all" className="text-sm">
-                  Select All Ready to Mint
-                </Label>
-              </div>
-            )}
-          </div>
+        {renderContent()}
 
-          {tokenSummaries.length === 0 ? (
-            <div className="text-center py-6">
-              <p className="text-muted-foreground">
-                No token types available for minting
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-4 max-h-[300px] overflow-y-auto pr-2">
-              {tokenSummaries.map((summary) => (
-                <div
-                  key={summary.tokenType}
-                  className="border rounded-lg p-4 space-y-2"
-                >
-                  <div className="flex justify-between items-start">
-                    <div className="flex items-center gap-2">
-                      {summary.status === "ready_to_mint" && (
-                        <Checkbox
-                          id={`token-${summary.tokenType}`}
-                          checked={selectedTokenTypes.includes(
-                            summary.tokenType,
-                          )}
-                          onCheckedChange={(checked) =>
-                            handleTokenTypeSelection(
-                              summary.tokenType,
-                              !!checked,
-                            )
-                          }
-                        />
-                      )}
-                      <div>
-                        <h4 className="font-medium">{summary.tokenType}</h4>
-                        <p className="text-sm text-muted-foreground">
-                          {formatCurrency(summary.totalAmount)}
-                        </p>
-                      </div>
-                    </div>
-                    {summary.status === "ready_to_mint" ? (
-                      <Badge className="bg-green-100 text-green-800">
-                        Ready to Mint
-                      </Badge>
-                    ) : (
-                      <Badge className="bg-yellow-100 text-yellow-800">
-                        Pending Confirmation
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          <div className="rounded-md border p-4 space-y-2 mt-4">
-            <h3 className="text-sm font-medium">Minting Information</h3>
-            <p className="text-sm text-muted-foreground">
-              Minting tokens requires multi-signature approval and will make the
-              tokens available for distribution to investors. Once minted,
-              tokens will be held in the issuer's wallet until distributed to
-              investors.
-            </p>
-          </div>
-
-          {mintableTokenTypes.length > 0 && (
-            <div className="flex items-start space-x-2 pt-4">
-              <Checkbox
-                id="mint-confirmation"
-                checked={confirmationChecked}
-                onCheckedChange={(checked) => setConfirmationChecked(!!checked)}
-                disabled={selectedTokenTypes.length === 0}
-              />
-              <Label
-                htmlFor="mint-confirmation"
-                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-              >
-                I confirm that I want to mint these tokens. This action requires
-                multi-signature approval and cannot be undone.
-              </Label>
-            </div>
-          )}
-        </div>
-
-        <DialogFooter>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            disabled={isMinting}
-          >
-            Cancel
-          </Button>
-          <Button
-            type="button"
-            onClick={handleMintTokens}
-            disabled={
-              !confirmationChecked ||
-              selectedTokenTypes.length === 0 ||
-              isMinting
-            }
-          >
-            {isMinting ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Minting Tokens...
-              </>
-            ) : (
-              "Mint Selected Tokens"
-            )}
-          </Button>
-        </DialogFooter>
+        <DialogFooter>{renderFooter()}</DialogFooter>
       </DialogContent>
     </Dialog>
   );

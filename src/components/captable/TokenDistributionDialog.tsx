@@ -10,272 +10,352 @@ import {
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Send, Loader2, AlertCircle } from "lucide-react";
+import { Send, Loader2, CheckCircle, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
-import { useToast } from "@/components/ui/use-toast";
-import { supabase } from "@/lib/supabase";
 
 interface TokenDistributionDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  selectedInvestorIds: string[];
-  onDistribute: () => void;
   projectId: string;
-  tokenTypes: Array<{ type: string; minted: boolean }>;
+  selectedAllocations: string[];
+  allocations: {
+    id: string;
+    investorName: string;
+    investorEmail: string;
+    walletAddress: string | null;
+    tokenType: string;
+    tokenAmount: number;
+  }[];
+  onDistributeComplete: (allocationIds: string[]) => void;
 }
 
 const TokenDistributionDialog = ({
   open,
   onOpenChange,
-  selectedInvestorIds,
-  onDistribute,
   projectId,
-  tokenTypes = [
-    { type: "ERC-20", minted: true },
-    { type: "ERC-1400", minted: true },
-  ],
+  selectedAllocations,
+  allocations,
+  onDistributeComplete,
 }: TokenDistributionDialogProps) => {
-  const [isDistributing, setIsDistributing] = useState(false);
-  const [confirmationChecked, setConfirmationChecked] = useState(false);
-  const [distributionType, setDistributionType] = useState("standard"); // "standard" or "bespoke"
-  const [standardAmount, setStandardAmount] = useState("100");
-  const [selectedTokenType, setSelectedTokenType] = useState(
-    tokenTypes.length > 0 ? tokenTypes[0].type : "",
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [distributionStep, setDistributionStep] = useState<
+    "review" | "confirm" | "processing" | "complete"
+  >("review");
+  const [confirmChecked, setConfirmChecked] = useState(false);
+
+  // Reset state when dialog opens
+  React.useEffect(() => {
+    if (open) {
+      setDistributionStep("review");
+      setIsProcessing(false);
+      setConfirmChecked(false);
+    }
+  }, [open]);
+
+  // Check if any allocations are missing wallet addresses
+  const missingWalletAddresses = allocations.filter(
+    (allocation) => !allocation.walletAddress,
   );
-  const [walletWarning, setWalletWarning] = useState(false);
-  const { toast } = useToast();
 
-  const mintedTokenTypes = tokenTypes.filter((token) => token.minted);
-
-  const handleDistribute = async () => {
-    if (
-      !confirmationChecked ||
-      selectedInvestorIds.length === 0 ||
-      !selectedTokenType ||
-      !walletWarning
-    )
-      return;
-
+  // Handle distribute tokens
+  const handleDistributeTokens = async () => {
     try {
-      setIsDistributing(true);
+      setIsProcessing(true);
+      setDistributionStep("processing");
 
-      // In a real implementation, this would call a blockchain service to distribute tokens
-      // For now, we'll simulate the API call
-
-      // Simulate API call delay
+      // Simulate distribution process with a delay
       await new Promise((resolve) => setTimeout(resolve, 2000));
 
-      // Log the operation for demonstration
-      console.log("Distributing tokens:", {
-        projectId,
-        investorIds: selectedInvestorIds,
-        tokenType: selectedTokenType,
-        distributionType,
-        standardAmount:
-          distributionType === "standard"
-            ? parseInt(standardAmount)
-            : "bespoke",
-      });
+      // Call the onDistributeComplete callback
+      await onDistributeComplete(selectedAllocations);
 
-      // Call the callback to notify parent component
-      await onDistribute();
-
-      // Close the dialog
-      onOpenChange(false);
+      // Set distribution as complete
+      setDistributionStep("complete");
     } catch (error) {
       console.error("Error distributing tokens:", error);
-      toast({
-        title: "Error",
-        description: "Failed to distribute tokens. Please try again.",
-        variant: "destructive",
-      });
+      // Reset to review step on error
+      setDistributionStep("review");
     } finally {
-      setIsDistributing(false);
-      setConfirmationChecked(false);
-      setWalletWarning(false);
+      setIsProcessing(false);
     }
   };
 
-  // Check if all token types are minted
-  const allTokensMinted = mintedTokenTypes.length > 0;
+  // Format number
+  const formatNumber = (amount: number) => {
+    return new Intl.NumberFormat("en-US", {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2,
+    }).format(amount);
+  };
+
+  // Group allocations by token type
+  const allocationsByTokenType = allocations.reduce(
+    (acc, allocation) => {
+      const { tokenType } = allocation;
+      if (!acc[tokenType]) {
+        acc[tokenType] = [];
+      }
+      acc[tokenType].push(allocation);
+      return acc;
+    },
+    {} as Record<string, typeof allocations>,
+  );
+
+  // Calculate total tokens by type
+  const tokenTotals = Object.entries(allocationsByTokenType).map(
+    ([tokenType, allocations]) => ({
+      tokenType,
+      total: allocations.reduce((sum, a) => sum + a.tokenAmount, 0),
+      count: allocations.length,
+    }),
+  );
+
+  // Render content based on current step
+  const renderContent = () => {
+    switch (distributionStep) {
+      case "review":
+        return (
+          <div className="space-y-4">
+            {missingWalletAddresses.length > 0 && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  {missingWalletAddresses.length} allocation(s) are missing
+                  wallet addresses. Please update investor details before
+                  distributing.
+                </AlertDescription>
+              </Alert>
+            )}
+
+            <div className="space-y-2">
+              <h3 className="text-sm font-medium">Distribution Summary</h3>
+              <div className="rounded-md border p-4 space-y-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">
+                    Total Allocations
+                  </p>
+                  <p className="text-lg font-medium">{allocations.length}</p>
+                </div>
+                <div className="space-y-2">
+                  {tokenTotals.map((tokenTotal) => (
+                    <div
+                      key={tokenTotal.tokenType}
+                      className="flex justify-between"
+                    >
+                      <div>
+                        <p className="text-sm font-medium">
+                          {tokenTotal.tokenType}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {tokenTotal.count} allocation(s)
+                        </p>
+                      </div>
+                      <p className="text-sm font-medium">
+                        {formatNumber(tokenTotal.total)} tokens
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-2 max-h-[200px] overflow-y-auto">
+              <h3 className="text-sm font-medium">Allocations to Distribute</h3>
+              <div className="rounded-md border">
+                <table className="w-full text-sm">
+                  <thead className="bg-muted/50">
+                    <tr>
+                      <th className="text-left p-2">Investor</th>
+                      <th className="text-left p-2">Token Type</th>
+                      <th className="text-right p-2">Amount</th>
+                      <th className="text-left p-2">Wallet</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {allocations.map((allocation) => (
+                      <tr key={allocation.id} className="border-t">
+                        <td className="p-2">
+                          <div>{allocation.investorName}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {allocation.investorEmail}
+                          </div>
+                        </td>
+                        <td className="p-2">{allocation.tokenType}</td>
+                        <td className="p-2 text-right">
+                          {formatNumber(allocation.tokenAmount)}
+                        </td>
+                        <td className="p-2 font-mono text-xs truncate max-w-[150px]">
+                          {allocation.walletAddress || (
+                            <span className="text-red-500">Not set</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        );
+
+      case "confirm":
+        return (
+          <div className="space-y-4">
+            <Alert>
+              <AlertDescription>
+                You are about to distribute tokens to {allocations.length}{" "}
+                investor(s). This action will send tokens to the specified
+                wallet addresses and cannot be undone.
+              </AlertDescription>
+            </Alert>
+
+            <div className="space-y-2">
+              <h3 className="text-sm font-medium">Distribution Details</h3>
+              <div className="rounded-md border p-4 space-y-2">
+                {tokenTotals.map((tokenTotal) => (
+                  <div key={tokenTotal.tokenType}>
+                    <p className="font-medium">{tokenTotal.tokenType}</p>
+                    <p className="text-sm">
+                      {formatNumber(tokenTotal.total)} tokens to{" "}
+                      {tokenTotal.count} investor(s)
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-2 pt-2">
+              <Checkbox
+                id="confirm-distribution"
+                checked={confirmChecked}
+                onCheckedChange={(checked) => setConfirmChecked(!!checked)}
+              />
+              <Label htmlFor="confirm-distribution">
+                I confirm that I want to distribute these tokens and understand
+                this action cannot be reversed
+              </Label>
+            </div>
+          </div>
+        );
+
+      case "processing":
+        return (
+          <div className="space-y-4 text-center py-6">
+            <Loader2 className="h-12 w-12 animate-spin mx-auto text-primary" />
+            <h3 className="text-lg font-medium">Distributing Tokens</h3>
+            <p className="text-muted-foreground">
+              Please wait while your tokens are being distributed. This process
+              may take a few minutes.
+            </p>
+          </div>
+        );
+
+      case "complete":
+        return (
+          <div className="space-y-4 text-center py-6">
+            <CheckCircle className="h-12 w-12 mx-auto text-green-500" />
+            <h3 className="text-lg font-medium">Distribution Complete</h3>
+            <p className="text-muted-foreground">
+              Your tokens have been successfully distributed to investor
+              wallets.
+            </p>
+          </div>
+        );
+
+      default:
+        return null;
+    }
+  };
+
+  // Render footer based on current step
+  const renderFooter = () => {
+    switch (distributionStep) {
+      case "review":
+        return (
+          <>
+            <Button
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={isProcessing}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => setDistributionStep("confirm")}
+              disabled={
+                isProcessing ||
+                allocations.length === 0 ||
+                missingWalletAddresses.length > 0
+              }
+            >
+              <Send className="mr-2 h-4 w-4" />
+              Continue to Distribution
+            </Button>
+          </>
+        );
+
+      case "confirm":
+        return (
+          <>
+            <Button
+              variant="outline"
+              onClick={() => setDistributionStep("review")}
+              disabled={isProcessing}
+            >
+              Back
+            </Button>
+            <Button
+              onClick={handleDistributeTokens}
+              disabled={isProcessing || !confirmChecked}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              {isProcessing ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Distributing...
+                </>
+              ) : (
+                <>
+                  <Send className="mr-2 h-4 w-4" />
+                  Distribute Tokens
+                </>
+              )}
+            </Button>
+          </>
+        );
+
+      case "processing":
+        return (
+          <Button disabled={true}>
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            Distribution in Progress...
+          </Button>
+        );
+
+      case "complete":
+        return <Button onClick={() => onOpenChange(false)}>Close</Button>;
+
+      default:
+        return null;
+    }
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[550px]">
+      <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Send className="h-5 w-5 text-primary" />
             <span>Distribute Tokens</span>
           </DialogTitle>
           <DialogDescription>
-            Distribute tokens to {selectedInvestorIds.length} selected investor
-            {selectedInvestorIds.length !== 1 ? "s" : ""}
+            Distribute tokens to investor wallets
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
-          {!allTokensMinted && (
-            <Alert variant="warning">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
-                No minted tokens available for distribution. Please mint tokens
-                first.
-              </AlertDescription>
-            </Alert>
-          )}
+        {renderContent()}
 
-          {allTokensMinted && (
-            <>
-              <div className="space-y-2">
-                <Label>Token Type</Label>
-                <RadioGroup
-                  value={selectedTokenType}
-                  onValueChange={setSelectedTokenType}
-                  className="flex flex-col space-y-1"
-                >
-                  {mintedTokenTypes.map((token) => (
-                    <div
-                      key={token.type}
-                      className="flex items-center space-x-2"
-                    >
-                      <RadioGroupItem
-                        value={token.type}
-                        id={`token-${token.type}`}
-                      />
-                      <Label htmlFor={`token-${token.type}`}>
-                        {token.type}
-                      </Label>
-                    </div>
-                  ))}
-                </RadioGroup>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Distribution Type</Label>
-                <RadioGroup
-                  value={distributionType}
-                  onValueChange={setDistributionType}
-                  className="flex flex-col space-y-1"
-                >
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="standard" id="standard" />
-                    <Label htmlFor="standard">
-                      Standard (same amount for all selected investors)
-                    </Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="bespoke" id="bespoke" />
-                    <Label htmlFor="bespoke">
-                      Bespoke (use confirmed subscription amounts)
-                    </Label>
-                  </div>
-                </RadioGroup>
-              </div>
-
-              {distributionType === "standard" && (
-                <div className="space-y-2">
-                  <Label htmlFor="standardAmount">Standard Amount</Label>
-                  <Input
-                    id="standardAmount"
-                    type="number"
-                    min="1"
-                    value={standardAmount}
-                    onChange={(e) => setStandardAmount(e.target.value)}
-                    className="w-full"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Each selected investor will receive {standardAmount}{" "}
-                    {selectedTokenType} tokens.
-                  </p>
-                </div>
-              )}
-            </>
-          )}
-
-          <div className="rounded-md border p-4 space-y-2">
-            <div className="flex justify-between items-center mb-2">
-              <h3 className="font-medium">Distribution Summary</h3>
-              <Badge variant="outline">
-                {selectedInvestorIds.length} Investor
-                {selectedInvestorIds.length !== 1 ? "s" : ""}
-              </Badge>
-            </div>
-            <p className="text-sm">
-              You are about to distribute {selectedTokenType || "tokens"} to{" "}
-              {selectedInvestorIds.length} investor
-              {selectedInvestorIds.length !== 1 ? "s" : ""}. This action will
-              send tokens to the investors' wallets and cannot be undone.
-            </p>
-            <p className="text-sm font-medium mt-2">
-              Please ensure all wallet addresses are correct before proceeding.
-            </p>
-          </div>
-
-          <div className="flex items-start space-x-2 pt-2">
-            <Checkbox
-              id="wallet-verification"
-              checked={walletWarning}
-              onCheckedChange={(checked) => setWalletWarning(!!checked)}
-              disabled={!allTokensMinted}
-            />
-            <Label
-              htmlFor="wallet-verification"
-              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-            >
-              I have verified that all investor wallet addresses are correct.
-            </Label>
-          </div>
-
-          <div className="flex items-start space-x-2 pt-2">
-            <Checkbox
-              id="distribution-confirmation"
-              checked={confirmationChecked}
-              onCheckedChange={(checked) => setConfirmationChecked(!!checked)}
-              disabled={!walletWarning || !allTokensMinted}
-            />
-            <Label
-              htmlFor="distribution-confirmation"
-              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-            >
-              I confirm that I want to distribute these tokens to the selected
-              investors. This action cannot be undone.
-            </Label>
-          </div>
-        </div>
-
-        <DialogFooter>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            disabled={isDistributing}
-          >
-            Cancel
-          </Button>
-          <Button
-            type="button"
-            onClick={handleDistribute}
-            disabled={
-              !confirmationChecked ||
-              selectedInvestorIds.length === 0 ||
-              isDistributing ||
-              !walletWarning ||
-              !allTokensMinted
-            }
-          >
-            {isDistributing ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Distributing...
-              </>
-            ) : (
-              "Distribute Tokens"
-            )}
-          </Button>
-        </DialogFooter>
+        <DialogFooter>{renderFooter()}</DialogFooter>
       </DialogContent>
     </Dialog>
   );

@@ -14,11 +14,12 @@ import {
   RefreshCw,
   Send,
   CheckCircle,
-  AlertCircle,
+  Filter,
+  Download,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
+import TokenDistributionDialog from "./TokenDistributionDialog";
 import {
   Table,
   TableBody,
@@ -27,7 +28,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import TokenDistributionDialog from "./TokenDistributionDialog";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface TokenDistributionManagerProps {
   projectId: string;
@@ -38,74 +39,72 @@ const TokenDistributionManager = ({
   projectId,
   projectName = "Project",
 }: TokenDistributionManagerProps) => {
-  const [distributions, setDistributions] = useState<any[]>([]);
+  const [allocations, setAllocations] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [isDistributeDialogOpen, setIsDistributeDialogOpen] = useState(false);
-  const [tokenTypes, setTokenTypes] = useState<any[]>([]);
+  const [isDistributionDialogOpen, setIsDistributionDialogOpen] =
+    useState(false);
+  const [selectedAllocations, setSelectedAllocations] = useState<string[]>([]);
+  const [tokenTypeFilter, setTokenTypeFilter] = useState<string | null>(null);
   const { toast } = useToast();
 
   // Fetch data when component mounts
   useEffect(() => {
     if (projectId) {
-      fetchDistributions();
-      fetchTokenTypes();
+      fetchTokenAllocations();
     }
   }, [projectId]);
 
-  const fetchDistributions = async () => {
+  const fetchTokenAllocations = async () => {
     try {
       setIsLoading(true);
 
-      // Get subscriptions for this project with investor details and token allocations
+      // Fetch token allocations from the database
       const { data, error } = await supabase
-        .from("subscriptions")
+        .from("token_allocations")
         .select(
           `
           id,
           investor_id,
           subscription_id,
-          confirmed,
-          allocated,
-          allocation_confirmed,
+          token_type,
+          token_amount,
           distributed,
-          investors!inner(name, email, wallet_address),
-          token_allocations(id, token_type, token_amount, distributed, distribution_date, distribution_tx_hash)
+          distribution_date,
+          distribution_tx_hash,
+          allocation_date,
+          subscriptions!inner(confirmed, allocated),
+          investors!inner(name, email, wallet_address)
         `,
         )
         .eq("project_id", projectId)
-        .eq("allocation_confirmed", true);
+        .not("allocation_date", "is", null); // Only get confirmed allocations
 
       if (error) throw error;
 
       // Transform data for the table
-      const transformedDistributions =
-        data?.map((subscription) => {
-          const tokenAllocation = subscription.token_allocations?.[0] || {};
-          return {
-            id: subscription.id,
-            investorId: subscription.investor_id,
-            investorName: subscription.investors.name,
-            investorEmail: subscription.investors.email,
-            walletAddress: subscription.investors.wallet_address,
-            tokenType: tokenAllocation.token_type || "",
-            tokenAmount: tokenAllocation.token_amount || 0,
-            confirmed: subscription.confirmed || false,
-            allocated: subscription.allocated || false,
-            allocationConfirmed: subscription.allocation_confirmed || false,
-            distributed: subscription.distributed || false,
-            distributionDate: tokenAllocation.distribution_date,
-            distributionTxHash: tokenAllocation.distribution_tx_hash,
-          };
-        }) || [];
+      const transformedAllocations = data?.map((allocation) => ({
+        id: allocation.id,
+        investorId: allocation.investor_id,
+        investorName: allocation.investors.name,
+        investorEmail: allocation.investors.email,
+        walletAddress: allocation.investors.wallet_address,
+        tokenType: allocation.token_type,
+        tokenAmount: allocation.token_amount,
+        distributed: allocation.distributed,
+        distributionDate: allocation.distribution_date,
+        distributionTxHash: allocation.distribution_tx_hash,
+        allocationDate: allocation.allocation_date,
+        confirmed: allocation.subscriptions.confirmed,
+        allocated: allocation.subscriptions.allocated,
+      }));
 
-      setDistributions(transformedDistributions);
+      setAllocations(transformedAllocations || []);
     } catch (err) {
-      console.error("Error fetching distributions:", err);
+      console.error("Error fetching token allocations:", err);
       toast({
         title: "Error",
-        description: "Failed to load distribution data. Please try again.",
+        description: "Failed to load token allocation data. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -113,117 +112,54 @@ const TokenDistributionManager = ({
     }
   };
 
-  const fetchTokenTypes = async () => {
+  // Filter allocations based on search query and token type filter
+  const filteredAllocations = allocations.filter((allocation) => {
+    const matchesSearch =
+      allocation.investorName
+        .toLowerCase()
+        .includes(searchQuery.toLowerCase()) ||
+      allocation.investorEmail
+        .toLowerCase()
+        .includes(searchQuery.toLowerCase()) ||
+      allocation.tokenType.toLowerCase().includes(searchQuery.toLowerCase());
+
+    const matchesTokenType = tokenTypeFilter
+      ? allocation.tokenType === tokenTypeFilter
+      : true;
+
+    return matchesSearch && matchesTokenType;
+  });
+
+  // Get unique token types for filtering
+  const tokenTypes = [...new Set(allocations.map((a) => a.tokenType))].sort();
+
+  // Handle distribute tokens
+  const handleDistributeTokens = async (allocationsToDistribute: string[]) => {
     try {
-      // Get token designs for this project
-      const { data, error } = await supabase
-        .from("token_designs")
-        .select("*")
-        .eq("project_id", projectId);
+      // In a real implementation, this would interact with a blockchain
+      // For now, we'll just update the database
+      const now = new Date().toISOString();
+
+      // Update the allocations to mark them as distributed
+      const { error } = await supabase
+        .from("token_allocations")
+        .update({
+          distributed: true,
+          distribution_date: now,
+          distribution_tx_hash: `0x${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`,
+        })
+        .in("id", allocationsToDistribute);
 
       if (error) throw error;
 
-      setTokenTypes(
-        data?.map((token) => ({
-          type: token.token_type,
-          minted: token.status === "minted",
-        })) || [],
-      );
-    } catch (err) {
-      console.error("Error fetching token types:", err);
-    }
-  };
-
-  // Filter distributions based on search query
-  const filteredDistributions = distributions.filter((distribution) => {
-    const matchesSearch =
-      distribution.investorName
-        .toLowerCase()
-        .includes(searchQuery.toLowerCase()) ||
-      distribution.investorEmail
-        .toLowerCase()
-        .includes(searchQuery.toLowerCase()) ||
-      distribution.tokenType
-        .toLowerCase()
-        .includes(searchQuery.toLowerCase()) ||
-      (distribution.walletAddress &&
-        distribution.walletAddress
-          .toLowerCase()
-          .includes(searchQuery.toLowerCase()));
-
-    return matchesSearch;
-  });
-
-  // Handle distribution selection
-  const handleSelectDistribution = (id: string, isSelected: boolean) => {
-    if (isSelected) {
-      setSelectedIds((prev) => [...prev, id]);
-    } else {
-      setSelectedIds((prev) => prev.filter((prevId) => prevId !== id));
-    }
-  };
-
-  // Handle select all
-  const handleSelectAll = (isSelected: boolean) => {
-    if (isSelected) {
-      setSelectedIds(
-        filteredDistributions.filter((d) => !d.distributed).map((d) => d.id),
-      );
-    } else {
-      setSelectedIds([]);
-    }
-  };
-
-  // Handle distribute tokens
-  const handleDistributeTokens = async () => {
-    try {
-      // Update subscriptions to distributed
-      const { error: subError } = await supabase
-        .from("subscriptions")
-        .update({
-          distributed: true,
-          updated_at: new Date().toISOString(),
-        })
-        .in("id", selectedIds);
-
-      if (subError) throw subError;
-
-      // Get token allocation IDs for these subscriptions
-      const { data: tokenAllocations, error: allocError } = await supabase
-        .from("token_allocations")
-        .select("id")
-        .in("subscription_id", selectedIds);
-
-      if (allocError) throw allocError;
-
-      if (tokenAllocations && tokenAllocations.length > 0) {
-        // Update token allocations to distributed
-        const { error: updateError } = await supabase
-          .from("token_allocations")
-          .update({
-            distributed: true,
-            distribution_date: new Date().toISOString(),
-            distribution_tx_hash: `tx-${Date.now()}`, // In a real app, this would be the actual transaction hash
-          })
-          .in(
-            "id",
-            tokenAllocations.map((a) => a.id),
-          );
-
-        if (updateError) throw updateError;
-      }
-
-      // Refresh data
-      await fetchDistributions();
-
       toast({
         title: "Tokens Distributed",
-        description: `Successfully distributed tokens to ${selectedIds.length} investor(s).`,
+        description: `Successfully distributed tokens to ${allocationsToDistribute.length} allocation(s).`,
       });
 
-      // Clear selection
-      setSelectedIds([]);
-      setIsDistributeDialogOpen(false);
+      setIsDistributionDialogOpen(false);
+      setSelectedAllocations([]);
+      fetchTokenAllocations(); // Refresh data after distribution
     } catch (err) {
       console.error("Error distributing tokens:", err);
       toast({
@@ -234,17 +170,54 @@ const TokenDistributionManager = ({
     }
   };
 
-  // Format token amount
-  const formatTokenAmount = (amount: number) => {
+  // Handle select all checkbox
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      // Only select allocations that are not already distributed
+      setSelectedAllocations(
+        filteredAllocations
+          .filter((allocation) => !allocation.distributed)
+          .map((allocation) => allocation.id),
+      );
+    } else {
+      setSelectedAllocations([]);
+    }
+  };
+
+  // Handle select allocation
+  const handleSelectAllocation = (
+    allocationId: string,
+    isSelected: boolean,
+  ) => {
+    if (isSelected) {
+      setSelectedAllocations((prev) => [...prev, allocationId]);
+    } else {
+      setSelectedAllocations((prev) =>
+        prev.filter((id) => id !== allocationId),
+      );
+    }
+  };
+
+  // Format number
+  const formatNumber = (amount: number) => {
     return new Intl.NumberFormat("en-US", {
+      minimumFractionDigits: 0,
       maximumFractionDigits: 2,
     }).format(amount);
   };
 
-  // Format date
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return "N/A";
-    return new Date(dateString).toLocaleDateString();
+  // Calculate summary statistics
+  const summaryStats = {
+    totalAllocations: allocations.length,
+    distributedAllocations: allocations.filter((a) => a.distributed).length,
+    pendingAllocations: allocations.filter((a) => !a.distributed).length,
+    totalTokens: allocations.reduce((sum, a) => sum + a.tokenAmount, 0),
+    distributedTokens: allocations
+      .filter((a) => a.distributed)
+      .reduce((sum, a) => sum + a.tokenAmount, 0),
+    pendingTokens: allocations
+      .filter((a) => !a.distributed)
+      .reduce((sum, a) => sum + a.tokenAmount, 0),
   };
 
   return (
@@ -255,14 +228,14 @@ const TokenDistributionManager = ({
             {projectName} Token Distribution
           </h1>
           <p className="text-sm text-muted-foreground">
-            Distribute tokens to investors with confirmed allocations
+            Distribute tokens to investor wallets
           </p>
         </div>
         <div className="flex gap-2">
           <div className="relative w-full md:w-64">
             <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search distributions..."
+              placeholder="Search allocations..."
               className="pl-9"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -271,7 +244,7 @@ const TokenDistributionManager = ({
           <Button
             variant="outline"
             size="icon"
-            onClick={fetchDistributions}
+            onClick={fetchTokenAllocations}
             disabled={isLoading}
             title="Refresh data"
           >
@@ -280,24 +253,137 @@ const TokenDistributionManager = ({
         </div>
       </div>
 
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg">Total Allocations</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold">
+              {summaryStats.totalAllocations}
+            </div>
+            <div className="flex justify-between mt-2">
+              <div>
+                <p className="text-sm text-muted-foreground">Distributed</p>
+                <p className="text-lg font-medium">
+                  {summaryStats.distributedAllocations}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Pending</p>
+                <p className="text-lg font-medium">
+                  {summaryStats.pendingAllocations}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg">Total Tokens</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold">
+              {formatNumber(summaryStats.totalTokens)}
+            </div>
+            <div className="flex justify-between mt-2">
+              <div>
+                <p className="text-sm text-muted-foreground">Distributed</p>
+                <p className="text-lg font-medium">
+                  {formatNumber(summaryStats.distributedTokens)}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Pending</p>
+                <p className="text-lg font-medium">
+                  {formatNumber(summaryStats.pendingTokens)}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg">Distribution Progress</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold">
+              {summaryStats.totalAllocations > 0
+                ? Math.round(
+                    (summaryStats.distributedAllocations /
+                      summaryStats.totalAllocations) *
+                      100,
+                  )
+                : 0}
+              %
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-2.5 mt-2">
+              <div
+                className="bg-primary h-2.5 rounded-full"
+                style={{
+                  width: `${
+                    summaryStats.totalAllocations > 0
+                      ? (summaryStats.distributedAllocations /
+                          summaryStats.totalAllocations) *
+                        100
+                      : 0
+                  }%`,
+                }}
+              ></div>
+            </div>
+            <p className="text-sm text-muted-foreground mt-2">
+              {summaryStats.distributedAllocations} of{" "}
+              {summaryStats.totalAllocations} allocations distributed
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Token Type Filter */}
+      <div className="flex flex-wrap gap-2">
+        <Button
+          variant={tokenTypeFilter === null ? "default" : "outline"}
+          size="sm"
+          onClick={() => setTokenTypeFilter(null)}
+        >
+          All Types
+        </Button>
+        {tokenTypes.map((type) => (
+          <Button
+            key={type}
+            variant={tokenTypeFilter === type ? "default" : "outline"}
+            size="sm"
+            onClick={() => setTokenTypeFilter(type)}
+          >
+            {type}
+          </Button>
+        ))}
+      </div>
+
+      {/* Allocations Table */}
       <Card>
         <CardHeader className="pb-3">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div className="flex justify-between items-center">
             <div>
-              <CardTitle>Token Distribution</CardTitle>
+              <CardTitle>Token Allocations</CardTitle>
               <CardDescription>
-                Distribute tokens to investors with confirmed allocations
+                Manage and distribute tokens to investors
               </CardDescription>
             </div>
-            {selectedIds.length > 0 && (
-              <Button
-                onClick={() => setIsDistributeDialogOpen(true)}
-                className="flex items-center gap-2"
-              >
-                <Send className="h-4 w-4" />
-                <span>Distribute to Selected ({selectedIds.length})</span>
-              </Button>
-            )}
+            <div className="flex gap-2">
+              {selectedAllocations.length > 0 && (
+                <Button
+                  onClick={() => setIsDistributionDialogOpen(true)}
+                  disabled={selectedAllocations.length === 0}
+                >
+                  <Send className="mr-2 h-4 w-4" />
+                  Distribute Selected ({selectedAllocations.length})
+                </Button>
+              )}
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -308,21 +394,24 @@ const TokenDistributionManager = ({
                   <TableHead className="w-[50px]">
                     <Checkbox
                       checked={
-                        filteredDistributions.filter((d) => !d.distributed)
+                        filteredAllocations.filter((a) => !a.distributed)
                           .length > 0 &&
-                        selectedIds.length ===
-                          filteredDistributions.filter((d) => !d.distributed)
+                        selectedAllocations.length ===
+                          filteredAllocations.filter((a) => !a.distributed)
                             .length
                       }
                       onCheckedChange={handleSelectAll}
-                      aria-label="Select all distributions"
+                      disabled={
+                        filteredAllocations.filter((a) => !a.distributed)
+                          .length === 0
+                      }
                     />
                   </TableHead>
                   <TableHead>Investor</TableHead>
                   <TableHead>Token Type</TableHead>
-                  <TableHead className="text-right">Token Amount</TableHead>
+                  <TableHead className="text-right">Amount</TableHead>
                   <TableHead>Wallet Address</TableHead>
-                  <TableHead className="text-center">Status</TableHead>
+                  <TableHead>Status</TableHead>
                   <TableHead>Distribution Date</TableHead>
                 </TableRow>
               </TableHeader>
@@ -336,63 +425,60 @@ const TokenDistributionManager = ({
                       </div>
                     </TableCell>
                   </TableRow>
-                ) : filteredDistributions.length === 0 ? (
+                ) : filteredAllocations.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={7} className="h-24 text-center">
-                      No distributions found
+                      No allocations found
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredDistributions.map((distribution) => (
-                    <TableRow key={distribution.id}>
+                  filteredAllocations.map((allocation) => (
+                    <TableRow key={allocation.id}>
                       <TableCell>
-                        {!distribution.distributed && (
-                          <Checkbox
-                            checked={selectedIds.includes(distribution.id)}
-                            onCheckedChange={(checked) =>
-                              handleSelectDistribution(
-                                distribution.id,
-                                !!checked,
-                              )
-                            }
-                            aria-label={`Select distribution for ${distribution.investorName}`}
-                          />
-                        )}
+                        <Checkbox
+                          checked={selectedAllocations.includes(allocation.id)}
+                          onCheckedChange={(checked) =>
+                            handleSelectAllocation(allocation.id, !!checked)
+                          }
+                          disabled={allocation.distributed}
+                        />
                       </TableCell>
                       <TableCell>
                         <div className="font-medium">
-                          {distribution.investorName}
+                          {allocation.investorName}
                         </div>
                         <div className="text-sm text-muted-foreground">
-                          {distribution.investorEmail}
+                          {allocation.investorEmail}
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline">
-                          {distribution.tokenType}
-                        </Badge>
+                        <Badge variant="outline">{allocation.tokenType}</Badge>
                       </TableCell>
                       <TableCell className="text-right">
-                        {formatTokenAmount(distribution.tokenAmount)}
+                        {formatNumber(allocation.tokenAmount)}
                       </TableCell>
                       <TableCell className="font-mono text-xs truncate max-w-[150px]">
-                        {distribution.walletAddress || "Not set"}
+                        {allocation.walletAddress || (
+                          <span className="text-red-500">Not set</span>
+                        )}
                       </TableCell>
-                      <TableCell className="text-center">
-                        {distribution.distributed ? (
+                      <TableCell>
+                        {allocation.distributed ? (
                           <Badge className="bg-green-100 text-green-800">
                             Distributed
                           </Badge>
                         ) : (
-                          <Badge className="bg-blue-100 text-blue-800">
-                            Ready for Distribution
+                          <Badge className="bg-yellow-100 text-yellow-800">
+                            Pending
                           </Badge>
                         )}
                       </TableCell>
                       <TableCell>
-                        {distribution.distributed
-                          ? formatDate(distribution.distributionDate)
-                          : "Pending"}
+                        {allocation.distributionDate
+                          ? new Date(
+                              allocation.distributionDate,
+                            ).toLocaleDateString()
+                          : "Not distributed"}
                       </TableCell>
                     </TableRow>
                   ))
@@ -403,14 +489,16 @@ const TokenDistributionManager = ({
         </CardContent>
       </Card>
 
-      {/* Distribution Dialog */}
+      {/* Token Distribution Dialog */}
       <TokenDistributionDialog
-        open={isDistributeDialogOpen}
-        onOpenChange={setIsDistributeDialogOpen}
-        selectedInvestorIds={selectedIds}
-        onDistribute={handleDistributeTokens}
+        open={isDistributionDialogOpen}
+        onOpenChange={setIsDistributionDialogOpen}
         projectId={projectId}
-        tokenTypes={tokenTypes}
+        selectedAllocations={selectedAllocations}
+        allocations={filteredAllocations.filter((a) =>
+          selectedAllocations.includes(a.id),
+        )}
+        onDistributeComplete={handleDistributeTokens}
       />
     </div>
   );
