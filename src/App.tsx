@@ -5,6 +5,7 @@ import Dashboard from "./components/dashboard/Dashboard";
 import InvestorsList from "./components/investors/InvestorsList";
 import ReportsDashboard from "./components/reports/ReportsDashboard";
 import TokenBuilder from "./components/tokens/TokenBuilder";
+import TokenAdministration from "./components/tokens/TokenAdministration";
 import MainLayout from "./components/layout/MainLayout";
 import CapTableManagerNew from "./components/captable/CapTableManagerNew";
 import routes from "tempo-routes";
@@ -102,6 +103,10 @@ function App() {
             <Route
               path="/projects/:projectId/tokens"
               element={<TokenBuilder />}
+            />
+            <Route
+              path="/projects/:projectId/token-admin"
+              element={<TokenAdministration />}
             />
           </Route>
         </Routes>

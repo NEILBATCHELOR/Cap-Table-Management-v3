@@ -29,6 +29,11 @@ const CapTableNavigation = ({ projectId }: { projectId: string }) => {
       href: `/projects/${projectId}/tokens`,
     },
     {
+      icon: <Coins className="h-4 w-4" />,
+      label: "Token Administration",
+      href: `/projects/${projectId}/token-admin`,
+    },
+    {
       icon: <Users className="h-4 w-4" />,
       label: "Investors",
       href: `/projects/${projectId}/captable/investors`,

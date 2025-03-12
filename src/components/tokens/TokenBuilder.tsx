@@ -89,12 +89,134 @@ interface TokenTemplate {
 }
 
 const TOKEN_STANDARDS = [
-  { value: "ERC-20", label: "ERC-20 (Fungible Token)" },
-  { value: "ERC-721", label: "ERC-721 (Non-Fungible Token)" },
-  { value: "ERC-1155", label: "ERC-1155 (Multi Token)" },
-  { value: "ERC-1400", label: "ERC-1400 (Security Token)" },
-  { value: "ERC-3525", label: "ERC-3525 (Semi-Fungible Token)" },
-  { value: "ERC-4626", label: "ERC-4626 (Tokenized Vault)" },
+  {
+    value: "ERC-20",
+    label: "ERC-20 (Fungible Token)",
+    description:
+      "Standard for fungible tokens where each token is identical and interchangeable",
+    mandatoryFunctions: [
+      "totalSupply()",
+      "balanceOf(address)",
+      "transfer(address,uint256)",
+      "transferFrom(address,address,uint256)",
+      "approve(address,uint256)",
+      "allowance(address,address)",
+    ],
+    optionalFunctions: ["name()", "symbol()", "decimals()"],
+    configOptions: [
+      "Initial Supply",
+      "Minting/Burning",
+      "Pausable",
+      "Access Control",
+    ],
+  },
+  {
+    value: "ERC-721",
+    label: "ERC-721 (Non-Fungible Token)",
+    description:
+      "Standard for non-fungible tokens where each token is unique and not interchangeable",
+    mandatoryFunctions: [
+      "balanceOf(address)",
+      "ownerOf(uint256)",
+      "safeTransferFrom(address,address,uint256)",
+      "transferFrom(address,address,uint256)",
+      "approve(address,uint256)",
+      "getApproved(uint256)",
+      "setApprovalForAll(address,bool)",
+      "isApprovedForAll(address,address)",
+    ],
+    optionalFunctions: ["name()", "symbol()", "tokenURI(uint256)"],
+    configOptions: ["Base URI", "Minting", "Royalties", "Metadata Storage"],
+  },
+  {
+    value: "ERC-1155",
+    label: "ERC-1155 (Multi Token)",
+    description:
+      "Standard for contracts that manage multiple token types (both fungible and non-fungible)",
+    mandatoryFunctions: [
+      "balanceOf(address,uint256)",
+      "balanceOfBatch(address[],uint256[])",
+      "setApprovalForAll(address,bool)",
+      "isApprovedForAll(address,address)",
+      "safeTransferFrom(address,address,uint256,uint256,bytes)",
+      "safeBatchTransferFrom(address,address,uint256[],uint256[],bytes)",
+    ],
+    optionalFunctions: ["uri(uint256)"],
+    configOptions: ["URI", "Minting", "Batch Operations", "Supply Tracking"],
+  },
+  {
+    value: "ERC-1400",
+    label: "ERC-1400 (Security Token)",
+    description:
+      "Standard for security tokens with transfer restrictions and compliance controls",
+    mandatoryFunctions: [
+      "getDocument(bytes32)",
+      "setDocument(bytes32,string,bytes32)",
+      "isControllable()",
+      "isIssuable()",
+      "canTransferByPartition(bytes32,address,address,uint256,bytes)",
+      "transferByPartition(bytes32,address,uint256,bytes)",
+    ],
+    optionalFunctions: [
+      "controllers()",
+      "authorizeOperator(address)",
+      "revokeOperator(address)",
+      "isOperator(address,address)",
+    ],
+    configOptions: [
+      "Partitions",
+      "Transfer Restrictions",
+      "Document Management",
+      "Compliance Controls",
+    ],
+  },
+  {
+    value: "ERC-3525",
+    label: "ERC-3525 (Semi-Fungible Token)",
+    description:
+      "Standard for semi-fungible tokens with slot-based value system",
+    mandatoryFunctions: [
+      "balanceOf(address)",
+      "ownerOf(uint256)",
+      "transferFrom(address,address,uint256)",
+      "slotOf(uint256)",
+      "valueDecimals()",
+      "valueOf(uint256)",
+      "transferValueFrom(uint256,uint256,uint256)",
+    ],
+    optionalFunctions: ["name()", "symbol()", "slotURI(uint256)"],
+    configOptions: ["Slots", "Values", "Decimals", "Tranches"],
+  },
+  {
+    value: "ERC-4626",
+    label: "ERC-4626 (Tokenized Vault)",
+    description: "Standard for tokenized yield-bearing vaults",
+    mandatoryFunctions: [
+      "asset()",
+      "totalAssets()",
+      "convertToShares(uint256)",
+      "convertToAssets(uint256)",
+      "maxDeposit(address)",
+      "previewDeposit(uint256)",
+      "deposit(uint256,address)",
+      "maxMint(address)",
+      "previewMint(uint256)",
+      "mint(uint256,address)",
+      "maxWithdraw(address)",
+      "previewWithdraw(uint256)",
+      "withdraw(uint256,address,address)",
+      "maxRedeem(address)",
+      "previewRedeem(uint256)",
+      "redeem(uint256,address,address)",
+    ],
+    optionalFunctions: [],
+    configOptions: [
+      "Underlying Asset",
+      "Yield Strategy",
+      "Deposit/Withdrawal Limits",
+      "Fee Structure",
+    ],
+  },
 ];
 
 const PRODUCT_CATEGORIES = [
@@ -167,10 +289,23 @@ const TOKEN_TEMPLATES: TokenTemplate[] = [
     name: "Fund Token",
     description: "Token representing shares in an investment fund",
     category: "Funds, ETFs, ETPs",
-    standard: "ERC-4626",
+    standard: "ERC-4626 + ERC-1400",
     defaultBlocks: {
-      compliance: ["KYC", "AML", "Investor Qualification"],
-      features: ["NAV Calculation", "Redemption Windows", "Management Fee"],
+      compliance: [
+        "KYC",
+        "AML",
+        "Investor Qualification",
+        "Whitelist",
+        "Jurisdiction Restrictions",
+      ],
+      features: [
+        "NAV Calculation",
+        "Redemption Windows",
+        "Management Fee",
+        "Deposit Limits",
+        "Withdrawal Limits",
+        "Yield Strategy",
+      ],
       governance: ["Fund Manager Control"],
     },
     icon: <Coins className="h-8 w-8 text-amber-500" />,
@@ -353,6 +488,15 @@ const TokenBuilder: React.FC<TokenBuilderProps> = ({
       whitelistEnabled: true,
       jurisdictionRestrictions: [] as string[],
       conversionRate: 0,
+      // Fund & ETF specific fields
+      underlyingAsset: "ETH",
+      yieldStrategy: "STAKING",
+      minDeposit: "1000",
+      maxDeposit: "1000000",
+      redemptionNoticeDays: "30",
+      managementFee: "2.0",
+      navOracleEnabled: false,
+      erc20ConversionRate: "1.0",
     },
   });
 
@@ -457,6 +601,14 @@ const TokenBuilder: React.FC<TokenBuilderProps> = ({
         whitelistEnabled: true,
         jurisdictionRestrictions: [],
         conversionRate: 0,
+        underlyingAsset: "ETH",
+        yieldStrategy: "STAKING",
+        minDeposit: "1000",
+        maxDeposit: "1000000",
+        redemptionNoticeDays: "30",
+        managementFee: "2.0",
+        navOracleEnabled: false,
+        erc20ConversionRate: "1.0",
       },
     });
     setSelectedTemplate(null);
@@ -479,10 +631,17 @@ const TokenBuilder: React.FC<TokenBuilderProps> = ({
           ]
         : [];
 
-    // Default name and symbol for Credit Linked Note
-    const defaultName =
-      template.name === "Credit Linked Note" ? "CreditLinkedNote2025" : "";
-    const defaultSymbol = template.name === "Credit Linked Note" ? "CLN" : "";
+    // Default name and symbol for templates
+    let defaultName = "";
+    let defaultSymbol = "";
+
+    if (template.name === "Credit Linked Note") {
+      defaultName = "CreditLinkedNote2025";
+      defaultSymbol = "CLN";
+    } else if (template.name === "Fund Token") {
+      defaultName = "YieldFund2025";
+      defaultSymbol = "YF";
+    }
 
     setTokenForm({
       name: defaultName,
@@ -505,6 +664,14 @@ const TokenBuilder: React.FC<TokenBuilderProps> = ({
         whitelistEnabled: true,
         jurisdictionRestrictions: [],
         conversionRate: 100,
+        underlyingAsset: "ETH",
+        yieldStrategy: "STAKING",
+        minDeposit: "1000",
+        maxDeposit: "1000000",
+        redemptionNoticeDays: "30",
+        managementFee: "2.0",
+        navOracleEnabled: false,
+        erc20ConversionRate: "1.0",
       },
     });
     setActiveTab("builder");
@@ -1340,26 +1507,6 @@ ${metadata.tranches.map((tranche) => `        _createTranche(${tranche.id}, "${t
                 {/* Basic Token Information */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <Label htmlFor="name">Token Name</Label>
-                    <Input
-                      id="name"
-                      name="name"
-                      placeholder="e.g., CreditLinkedNote2025"
-                      value={tokenForm.name}
-                      onChange={handleInputChange}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="symbol">Token Symbol</Label>
-                    <Input
-                      id="symbol"
-                      name="symbol"
-                      placeholder="e.g., CLN"
-                      value={tokenForm.symbol}
-                      onChange={handleInputChange}
-                    />
-                  </div>
-                  <div className="space-y-2">
                     <Label htmlFor="standard">Token Standard</Label>
                     <Select
                       value={tokenForm.standard}
@@ -1379,68 +1526,2223 @@ ${metadata.tranches.map((tranche) => `        _createTranche(${tranche.id}, "${t
                         ))}
                       </SelectContent>
                     </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="decimals">Decimals</Label>
-                    <Input
-                      id="decimals"
-                      name="decimals"
-                      type="number"
-                      min="0"
-                      max="18"
-                      placeholder="18"
-                      value={tokenForm.decimals}
-                      onChange={handleInputChange}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="totalSupply">Total Supply</Label>
-                    <Input
-                      id="totalSupply"
-                      name="totalSupply"
-                      type="number"
-                      min="1"
-                      placeholder="1000000"
-                      value={tokenForm.totalSupply}
-                      onChange={(e) =>
-                        setTokenForm((prev) => ({
-                          ...prev,
-                          totalSupply: parseInt(e.target.value) || 0,
-                        }))
-                      }
-                    />
-                  </div>
-
-                  {(tokenForm.standard === "ERC-3525" ||
-                    tokenForm.metadata.product.includes("Structured Product") ||
-                    tokenForm.metadata.product.includes("Credit Linked")) && (
-                    <div className="space-y-2">
-                      <Label htmlFor="conversionRate">
-                        Conversion Rate to ERC-20
-                      </Label>
-                      <Input
-                        id="conversionRate"
-                        type="number"
-                        min="0"
-                        placeholder="100"
-                        value={tokenForm.metadata.conversionRate}
-                        onChange={(e) =>
-                          setTokenForm((prev) => ({
-                            ...prev,
-                            metadata: {
-                              ...prev.metadata,
-                              conversionRate: parseInt(e.target.value) || 0,
-                            },
-                          }))
+                    {tokenForm.standard && (
+                      <div className="mt-2 text-xs text-muted-foreground">
+                        {
+                          TOKEN_STANDARDS.find(
+                            (s) => s.value === tokenForm.standard,
+                          )?.description
                         }
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        1 token = {tokenForm.metadata.conversionRate} ERC-20
-                        tokens
-                      </p>
-                    </div>
-                  )}
+                      </div>
+                    )}
+                  </div>
                 </div>
+
+                {/* ERC-20 Configuration */}
+                {tokenForm.standard === "ERC-20" && (
+                  <div className="space-y-6 border-t pt-6">
+                    <h3 className="text-lg font-medium">
+                      ERC-20 Token Configuration
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <Label htmlFor="name">Token Name</Label>
+                        <Input
+                          id="name"
+                          name="name"
+                          placeholder="e.g., MyToken"
+                          value={tokenForm.name}
+                          onChange={handleInputChange}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="symbol">Token Symbol</Label>
+                        <Input
+                          id="symbol"
+                          name="symbol"
+                          placeholder="e.g., MTK"
+                          value={tokenForm.symbol}
+                          onChange={handleInputChange}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="decimals">Decimals</Label>
+                        <Input
+                          id="decimals"
+                          name="decimals"
+                          type="number"
+                          min="0"
+                          max="18"
+                          placeholder="18"
+                          value={tokenForm.decimals}
+                          onChange={handleInputChange}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="totalSupply">Total Supply</Label>
+                        <Input
+                          id="totalSupply"
+                          name="totalSupply"
+                          type="number"
+                          min="1"
+                          placeholder="1000000"
+                          value={tokenForm.totalSupply}
+                          onChange={(e) =>
+                            setTokenForm((prev) => ({
+                              ...prev,
+                              totalSupply: parseInt(e.target.value) || 0,
+                            }))
+                          }
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="ownerAddress">
+                          Owner Address (ETH Wallet)
+                        </Label>
+                        <Input
+                          id="ownerAddress"
+                          name="ownerAddress"
+                          placeholder="0x..."
+                          value={tokenForm.metadata.ownerAddress || ""}
+                          onChange={(e) =>
+                            setTokenForm((prev) => ({
+                              ...prev,
+                              metadata: {
+                                ...prev.metadata,
+                                ownerAddress: e.target.value,
+                              },
+                            }))
+                          }
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-4 mt-6">
+                      <h4 className="font-medium">Token Features</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="mintable"
+                            checked={tokenForm.metadata.mintable || false}
+                            onCheckedChange={(checked) =>
+                              setTokenForm((prev) => ({
+                                ...prev,
+                                metadata: {
+                                  ...prev.metadata,
+                                  mintable: !!checked,
+                                },
+                              }))
+                            }
+                          />
+                          <div>
+                            <Label htmlFor="mintable">Mintable</Label>
+                            <p className="text-xs text-muted-foreground">
+                              Allow creation of new tokens
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="burnable"
+                            checked={tokenForm.metadata.burnable || false}
+                            onCheckedChange={(checked) =>
+                              setTokenForm((prev) => ({
+                                ...prev,
+                                metadata: {
+                                  ...prev.metadata,
+                                  burnable: !!checked,
+                                },
+                              }))
+                            }
+                          />
+                          <div>
+                            <Label htmlFor="burnable">Burnable</Label>
+                            <p className="text-xs text-muted-foreground">
+                              Allow tokens to be destroyed
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="pausable"
+                            checked={tokenForm.metadata.pausable || false}
+                            onCheckedChange={(checked) =>
+                              setTokenForm((prev) => ({
+                                ...prev,
+                                metadata: {
+                                  ...prev.metadata,
+                                  pausable: !!checked,
+                                },
+                              }))
+                            }
+                          />
+                          <div>
+                            <Label htmlFor="pausable">Pausable</Label>
+                            <p className="text-xs text-muted-foreground">
+                              Enable emergency stop functionality
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="transferRestrictions"
+                            checked={
+                              tokenForm.metadata.transferRestrictions || false
+                            }
+                            onCheckedChange={(checked) =>
+                              setTokenForm((prev) => ({
+                                ...prev,
+                                metadata: {
+                                  ...prev.metadata,
+                                  transferRestrictions: !!checked,
+                                },
+                              }))
+                            }
+                          />
+                          <div>
+                            <Label htmlFor="transferRestrictions">
+                              Transfer Restrictions
+                            </Label>
+                            <p className="text-xs text-muted-foreground">
+                              Limit transfers based on rules
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4 mt-6 border-t pt-6">
+                      <h4 className="font-medium">ERC-20 Metadata Editor</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                          <Label htmlFor="description">Description*</Label>
+                          <Input
+                            id="description"
+                            placeholder="Token description"
+                            value={tokenForm.metadata.description || ""}
+                            onChange={(e) =>
+                              setTokenForm((prev) => ({
+                                ...prev,
+                                metadata: {
+                                  ...prev.metadata,
+                                  description: e.target.value,
+                                },
+                              }))
+                            }
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="externalUrl">External URL</Label>
+                          <Input
+                            id="externalUrl"
+                            placeholder="https://"
+                            value={tokenForm.metadata.externalUrl || ""}
+                            onChange={(e) =>
+                              setTokenForm((prev) => ({
+                                ...prev,
+                                metadata: {
+                                  ...prev.metadata,
+                                  externalUrl: e.target.value,
+                                },
+                              }))
+                            }
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="maxSupply">Max Supply*</Label>
+                          <Input
+                            id="maxSupply"
+                            type="number"
+                            min="0"
+                            placeholder="0 for unlimited"
+                            value={tokenForm.metadata.maxSupply || ""}
+                            onChange={(e) =>
+                              setTokenForm((prev) => ({
+                                ...prev,
+                                metadata: {
+                                  ...prev.metadata,
+                                  maxSupply: e.target.value,
+                                },
+                              }))
+                            }
+                          />
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="isTransferable"
+                            checked={
+                              tokenForm.metadata.isTransferable !== false
+                            } // Default to true
+                            onCheckedChange={(checked) =>
+                              setTokenForm((prev) => ({
+                                ...prev,
+                                metadata: {
+                                  ...prev.metadata,
+                                  isTransferable: !!checked,
+                                },
+                              }))
+                            }
+                          />
+                          <div>
+                            <Label htmlFor="isTransferable">
+                              Is Transferable
+                            </Label>
+                            <p className="text-xs text-muted-foreground">
+                              Allow tokens to be transferred between wallets
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* ERC-721 Configuration */}
+                {tokenForm.standard === "ERC-721" && (
+                  <div className="space-y-6 border-t pt-6">
+                    <h3 className="text-lg font-medium">
+                      ERC-721 Non-Fungible Token Configuration
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <Label htmlFor="name">Token Name</Label>
+                        <Input
+                          id="name"
+                          name="name"
+                          placeholder="e.g., MyNFT"
+                          value={tokenForm.name}
+                          onChange={handleInputChange}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="symbol">Token Symbol</Label>
+                        <Input
+                          id="symbol"
+                          name="symbol"
+                          placeholder="e.g., MNFT"
+                          value={tokenForm.symbol}
+                          onChange={handleInputChange}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="description">Description</Label>
+                        <Input
+                          id="description"
+                          placeholder="Collection description"
+                          value={tokenForm.metadata.description || ""}
+                          onChange={(e) =>
+                            setTokenForm((prev) => ({
+                              ...prev,
+                              metadata: {
+                                ...prev.metadata,
+                                description: e.target.value,
+                              },
+                            }))
+                          }
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="imageUrl">Image URL</Label>
+                        <Input
+                          id="imageUrl"
+                          placeholder="https://"
+                          value={tokenForm.metadata.imageUrl || ""}
+                          onChange={(e) =>
+                            setTokenForm((prev) => ({
+                              ...prev,
+                              metadata: {
+                                ...prev.metadata,
+                                imageUrl: e.target.value,
+                              },
+                            }))
+                          }
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="ownerAddress">
+                          Owner Address (ETH Wallet)
+                        </Label>
+                        <Input
+                          id="ownerAddress"
+                          placeholder="0x..."
+                          value={tokenForm.metadata.ownerAddress || ""}
+                          onChange={(e) =>
+                            setTokenForm((prev) => ({
+                              ...prev,
+                              metadata: {
+                                ...prev.metadata,
+                                ownerAddress: e.target.value,
+                              },
+                            }))
+                          }
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-4 mt-6">
+                      <h4 className="font-medium">Token Features</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="mintable"
+                            checked={tokenForm.metadata.mintable || false}
+                            onCheckedChange={(checked) =>
+                              setTokenForm((prev) => ({
+                                ...prev,
+                                metadata: {
+                                  ...prev.metadata,
+                                  mintable: !!checked,
+                                },
+                              }))
+                            }
+                          />
+                          <div>
+                            <Label htmlFor="mintable">Mintable</Label>
+                            <p className="text-xs text-muted-foreground">
+                              Allow creation of new tokens
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="burnable"
+                            checked={tokenForm.metadata.burnable || false}
+                            onCheckedChange={(checked) =>
+                              setTokenForm((prev) => ({
+                                ...prev,
+                                metadata: {
+                                  ...prev.metadata,
+                                  burnable: !!checked,
+                                },
+                              }))
+                            }
+                          />
+                          <div>
+                            <Label htmlFor="burnable">Burnable</Label>
+                            <p className="text-xs text-muted-foreground">
+                              Allow tokens to be destroyed
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="pausable"
+                            checked={tokenForm.metadata.pausable || false}
+                            onCheckedChange={(checked) =>
+                              setTokenForm((prev) => ({
+                                ...prev,
+                                metadata: {
+                                  ...prev.metadata,
+                                  pausable: !!checked,
+                                },
+                              }))
+                            }
+                          />
+                          <div>
+                            <Label htmlFor="pausable">Pausable</Label>
+                            <p className="text-xs text-muted-foreground">
+                              Enable emergency stop functionality
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="transferRestrictions"
+                            checked={
+                              tokenForm.metadata.transferRestrictions || false
+                            }
+                            onCheckedChange={(checked) =>
+                              setTokenForm((prev) => ({
+                                ...prev,
+                                metadata: {
+                                  ...prev.metadata,
+                                  transferRestrictions: !!checked,
+                                },
+                              }))
+                            }
+                          />
+                          <div>
+                            <Label htmlFor="transferRestrictions">
+                              Transfer Restrictions
+                            </Label>
+                            <p className="text-xs text-muted-foreground">
+                              Limit transfers based on rules
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4 mt-6 border-t pt-6">
+                      <h4 className="font-medium">ERC-721 Metadata Editor</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                          <Label htmlFor="collectionName">
+                            Collection Name*
+                          </Label>
+                          <Input
+                            id="collectionName"
+                            placeholder="Collection name"
+                            value={
+                              tokenForm.metadata.collectionName ||
+                              tokenForm.name
+                            }
+                            onChange={(e) =>
+                              setTokenForm((prev) => ({
+                                ...prev,
+                                metadata: {
+                                  ...prev.metadata,
+                                  collectionName: e.target.value,
+                                },
+                              }))
+                            }
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="royalties">Royalties (%)</Label>
+                          <Input
+                            id="royalties"
+                            type="number"
+                            min="0"
+                            max="100"
+                            step="0.1"
+                            placeholder="0"
+                            value={tokenForm.metadata.royalties || ""}
+                            onChange={(e) =>
+                              setTokenForm((prev) => ({
+                                ...prev,
+                                metadata: {
+                                  ...prev.metadata,
+                                  royalties: e.target.value,
+                                },
+                              }))
+                            }
+                          />
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="isTransferable"
+                            checked={
+                              tokenForm.metadata.isTransferable !== false
+                            } // Default to true
+                            onCheckedChange={(checked) =>
+                              setTokenForm((prev) => ({
+                                ...prev,
+                                metadata: {
+                                  ...prev.metadata,
+                                  isTransferable: !!checked,
+                                },
+                              }))
+                            }
+                          />
+                          <div>
+                            <Label htmlFor="isTransferable">
+                              Is Transferable
+                            </Label>
+                            <p className="text-xs text-muted-foreground">
+                              Allow tokens to be transferred between wallets
+                            </p>
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="baseUri">
+                            Custom Base Metadata URI
+                          </Label>
+                          <Input
+                            id="baseUri"
+                            placeholder="ipfs://"
+                            value={tokenForm.metadata.baseUri || ""}
+                            onChange={(e) =>
+                              setTokenForm((prev) => ({
+                                ...prev,
+                                metadata: {
+                                  ...prev.metadata,
+                                  baseUri: e.target.value,
+                                },
+                              }))
+                            }
+                          />
+                          <p className="text-xs text-muted-foreground">
+                            Allows off-chain metadata link
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* ERC-1155 Configuration */}
+                {tokenForm.standard === "ERC-1155" && (
+                  <div className="space-y-6 border-t pt-6">
+                    <h3 className="text-lg font-medium">
+                      ERC-1155 Multi Token Configuration
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <Label htmlFor="name">Token Name</Label>
+                        <Input
+                          id="name"
+                          name="name"
+                          placeholder="e.g., MultiToken"
+                          value={tokenForm.name}
+                          onChange={handleInputChange}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="symbol">Token Symbol</Label>
+                        <Input
+                          id="symbol"
+                          name="symbol"
+                          placeholder="e.g., MTK"
+                          value={tokenForm.symbol}
+                          onChange={handleInputChange}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="ownerAddress">
+                          Owner Address (ETH Wallet)
+                        </Label>
+                        <Input
+                          id="ownerAddress"
+                          placeholder="0x..."
+                          value={tokenForm.metadata.ownerAddress || ""}
+                          onChange={(e) =>
+                            setTokenForm((prev) => ({
+                              ...prev,
+                              metadata: {
+                                ...prev.metadata,
+                                ownerAddress: e.target.value,
+                              },
+                            }))
+                          }
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-4 mt-6">
+                      <div className="flex justify-between items-center">
+                        <h4 className="font-medium">Token Types</h4>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            const newTokens = [
+                              ...(tokenForm.metadata.tokens || []),
+                            ];
+                            newTokens.push({
+                              id: newTokens.length + 1,
+                              type: "Fungible",
+                              name: `Token ${newTokens.length + 1}`,
+                              amount: 1000,
+                              maxSupply: 0,
+                              uri: "",
+                              burnable: false,
+                              transferable: true,
+                            });
+                            setTokenForm((prev) => ({
+                              ...prev,
+                              metadata: {
+                                ...prev.metadata,
+                                tokens: newTokens,
+                              },
+                            }));
+                          }}
+                        >
+                          <Plus className="h-4 w-4 mr-2" /> Add Token
+                        </Button>
+                      </div>
+
+                      {!tokenForm.metadata.tokens ||
+                      tokenForm.metadata.tokens.length === 0 ? (
+                        <div className="text-center py-4 border rounded-md">
+                          <p className="text-muted-foreground">
+                            No tokens defined. Add a token to get started.
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="space-y-4">
+                          {tokenForm.metadata.tokens.map((token, index) => (
+                            <div
+                              key={index}
+                              className="border rounded-md p-4 space-y-4"
+                            >
+                              <div className="flex justify-between items-center">
+                                <h5 className="font-medium">
+                                  Token #{token.id}
+                                </h5>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => {
+                                    const newTokens = [
+                                      ...tokenForm.metadata.tokens,
+                                    ];
+                                    newTokens.splice(index, 1);
+                                    setTokenForm((prev) => ({
+                                      ...prev,
+                                      metadata: {
+                                        ...prev.metadata,
+                                        tokens: newTokens,
+                                      },
+                                    }));
+                                  }}
+                                >
+                                  <Trash2 className="h-4 w-4 text-red-500" />
+                                </Button>
+                              </div>
+
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                  <Label htmlFor={`token-${index}-type`}>
+                                    Token Type
+                                  </Label>
+                                  <Select
+                                    value={token.type}
+                                    onValueChange={(value) => {
+                                      const newTokens = [
+                                        ...tokenForm.metadata.tokens,
+                                      ];
+                                      newTokens[index].type = value;
+                                      setTokenForm((prev) => ({
+                                        ...prev,
+                                        metadata: {
+                                          ...prev.metadata,
+                                          tokens: newTokens,
+                                        },
+                                      }));
+                                    }}
+                                  >
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Select token type" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="Fungible">
+                                        Fungible
+                                      </SelectItem>
+                                      <SelectItem value="Semi-Fungible">
+                                        Semi-Fungible
+                                      </SelectItem>
+                                      <SelectItem value="Non-Fungible">
+                                        Non-Fungible
+                                      </SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+
+                                <div className="space-y-2">
+                                  <Label htmlFor={`token-${index}-name`}>
+                                    Name
+                                  </Label>
+                                  <Input
+                                    id={`token-${index}-name`}
+                                    value={token.name}
+                                    onChange={(e) => {
+                                      const newTokens = [
+                                        ...tokenForm.metadata.tokens,
+                                      ];
+                                      newTokens[index].name = e.target.value;
+                                      setTokenForm((prev) => ({
+                                        ...prev,
+                                        metadata: {
+                                          ...prev.metadata,
+                                          tokens: newTokens,
+                                        },
+                                      }));
+                                    }}
+                                  />
+                                </div>
+
+                                <div className="space-y-2">
+                                  <Label htmlFor={`token-${index}-amount`}>
+                                    Amount
+                                  </Label>
+                                  <Input
+                                    id={`token-${index}-amount`}
+                                    type="number"
+                                    min="1"
+                                    value={token.amount}
+                                    onChange={(e) => {
+                                      const newTokens = [
+                                        ...tokenForm.metadata.tokens,
+                                      ];
+                                      newTokens[index].amount =
+                                        parseInt(e.target.value) || 1;
+                                      setTokenForm((prev) => ({
+                                        ...prev,
+                                        metadata: {
+                                          ...prev.metadata,
+                                          tokens: newTokens,
+                                        },
+                                      }));
+                                    }}
+                                  />
+                                </div>
+
+                                <div className="space-y-2">
+                                  <Label htmlFor={`token-${index}-maxSupply`}>
+                                    Maximum Supply
+                                  </Label>
+                                  <Input
+                                    id={`token-${index}-maxSupply`}
+                                    type="number"
+                                    min="0"
+                                    placeholder="0 for unlimited"
+                                    value={token.maxSupply}
+                                    onChange={(e) => {
+                                      const newTokens = [
+                                        ...tokenForm.metadata.tokens,
+                                      ];
+                                      newTokens[index].maxSupply =
+                                        parseInt(e.target.value) || 0;
+                                      setTokenForm((prev) => ({
+                                        ...prev,
+                                        metadata: {
+                                          ...prev.metadata,
+                                          tokens: newTokens,
+                                        },
+                                      }));
+                                    }}
+                                  />
+                                </div>
+
+                                <div className="space-y-2">
+                                  <Label htmlFor={`token-${index}-uri`}>
+                                    URI
+                                  </Label>
+                                  <Input
+                                    id={`token-${index}-uri`}
+                                    placeholder="ipfs://"
+                                    value={token.uri}
+                                    onChange={(e) => {
+                                      const newTokens = [
+                                        ...tokenForm.metadata.tokens,
+                                      ];
+                                      newTokens[index].uri = e.target.value;
+                                      setTokenForm((prev) => ({
+                                        ...prev,
+                                        metadata: {
+                                          ...prev.metadata,
+                                          tokens: newTokens,
+                                        },
+                                      }));
+                                    }}
+                                  />
+                                </div>
+
+                                <div className="flex items-center space-x-2">
+                                  <Checkbox
+                                    id={`token-${index}-burnable`}
+                                    checked={token.burnable}
+                                    onCheckedChange={(checked) => {
+                                      const newTokens = [
+                                        ...tokenForm.metadata.tokens,
+                                      ];
+                                      newTokens[index].burnable = !!checked;
+                                      setTokenForm((prev) => ({
+                                        ...prev,
+                                        metadata: {
+                                          ...prev.metadata,
+                                          tokens: newTokens,
+                                        },
+                                      }));
+                                    }}
+                                  />
+                                  <Label htmlFor={`token-${index}-burnable`}>
+                                    Burnable
+                                  </Label>
+                                </div>
+
+                                <div className="flex items-center space-x-2">
+                                  <Checkbox
+                                    id={`token-${index}-transferable`}
+                                    checked={token.transferable}
+                                    onCheckedChange={(checked) => {
+                                      const newTokens = [
+                                        ...tokenForm.metadata.tokens,
+                                      ];
+                                      newTokens[index].transferable = !!checked;
+                                      setTokenForm((prev) => ({
+                                        ...prev,
+                                        metadata: {
+                                          ...prev.metadata,
+                                          tokens: newTokens,
+                                        },
+                                      }));
+                                    }}
+                                  />
+                                  <Label
+                                    htmlFor={`token-${index}-transferable`}
+                                  >
+                                    Transferable
+                                  </Label>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="space-y-4 mt-6">
+                      <h4 className="font-medium">Token Features</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="mintable"
+                            checked={tokenForm.metadata.mintable || false}
+                            onCheckedChange={(checked) =>
+                              setTokenForm((prev) => ({
+                                ...prev,
+                                metadata: {
+                                  ...prev.metadata,
+                                  mintable: !!checked,
+                                },
+                              }))
+                            }
+                          />
+                          <div>
+                            <Label htmlFor="mintable">Mintable</Label>
+                            <p className="text-xs text-muted-foreground">
+                              Allow creation of new tokens
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="burnable"
+                            checked={tokenForm.metadata.burnable || false}
+                            onCheckedChange={(checked) =>
+                              setTokenForm((prev) => ({
+                                ...prev,
+                                metadata: {
+                                  ...prev.metadata,
+                                  burnable: !!checked,
+                                },
+                              }))
+                            }
+                          />
+                          <div>
+                            <Label htmlFor="burnable">Burnable</Label>
+                            <p className="text-xs text-muted-foreground">
+                              Allow tokens to be destroyed
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="pausable"
+                            checked={tokenForm.metadata.pausable || false}
+                            onCheckedChange={(checked) =>
+                              setTokenForm((prev) => ({
+                                ...prev,
+                                metadata: {
+                                  ...prev.metadata,
+                                  pausable: !!checked,
+                                },
+                              }))
+                            }
+                          />
+                          <div>
+                            <Label htmlFor="pausable">Pausable</Label>
+                            <p className="text-xs text-muted-foreground">
+                              Enable emergency stop functionality
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="transferRestrictions"
+                            checked={
+                              tokenForm.metadata.transferRestrictions || false
+                            }
+                            onCheckedChange={(checked) =>
+                              setTokenForm((prev) => ({
+                                ...prev,
+                                metadata: {
+                                  ...prev.metadata,
+                                  transferRestrictions: !!checked,
+                                },
+                              }))
+                            }
+                          />
+                          <div>
+                            <Label htmlFor="transferRestrictions">
+                              Transfer Restrictions
+                            </Label>
+                            <p className="text-xs text-muted-foreground">
+                              Limit transfers based on rules
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4 mt-6 border-t pt-6">
+                      <h4 className="font-medium">ERC-1155 Metadata Editor</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                          <Label htmlFor="collectionName">
+                            Collection Name*
+                          </Label>
+                          <Input
+                            id="collectionName"
+                            placeholder="Collection name"
+                            value={
+                              tokenForm.metadata.collectionName ||
+                              tokenForm.name
+                            }
+                            onChange={(e) =>
+                              setTokenForm((prev) => ({
+                                ...prev,
+                                metadata: {
+                                  ...prev.metadata,
+                                  collectionName: e.target.value,
+                                },
+                              }))
+                            }
+                          />
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="supportsBatchTransfers"
+                            checked={
+                              tokenForm.metadata.supportsBatchTransfers !==
+                              false
+                            } // Default to true
+                            onCheckedChange={(checked) =>
+                              setTokenForm((prev) => ({
+                                ...prev,
+                                metadata: {
+                                  ...prev.metadata,
+                                  supportsBatchTransfers: !!checked,
+                                },
+                              }))
+                            }
+                          />
+                          <div>
+                            <Label htmlFor="supportsBatchTransfers">
+                              Supports Batch Transfers
+                            </Label>
+                            <p className="text-xs text-muted-foreground">
+                              Enable efficient batch operations
+                            </p>
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="baseUri">
+                            Custom Base Metadata URI
+                          </Label>
+                          <Input
+                            id="baseUri"
+                            placeholder="ipfs://"
+                            value={tokenForm.metadata.baseUri || ""}
+                            onChange={(e) =>
+                              setTokenForm((prev) => ({
+                                ...prev,
+                                metadata: {
+                                  ...prev.metadata,
+                                  baseUri: e.target.value,
+                                },
+                              }))
+                            }
+                          />
+                          <p className="text-xs text-muted-foreground">
+                            Allows off-chain metadata link
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* ERC-1400 Configuration */}
+                {tokenForm.standard === "ERC-1400" && (
+                  <div className="space-y-6 border-t pt-6">
+                    <h3 className="text-lg font-medium">
+                      ERC-1400 Security Token Configuration
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <Label htmlFor="name">Token Name</Label>
+                        <Input
+                          id="name"
+                          name="name"
+                          placeholder="e.g., SecurityToken"
+                          value={tokenForm.name}
+                          onChange={handleInputChange}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="symbol">Token Symbol</Label>
+                        <Input
+                          id="symbol"
+                          name="symbol"
+                          placeholder="e.g., STKN"
+                          value={tokenForm.symbol}
+                          onChange={handleInputChange}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="ownerAddress">
+                          Owner Address (ETH Wallet)
+                        </Label>
+                        <Input
+                          id="ownerAddress"
+                          placeholder="0x..."
+                          value={tokenForm.metadata.ownerAddress || ""}
+                          onChange={(e) =>
+                            setTokenForm((prev) => ({
+                              ...prev,
+                              metadata: {
+                                ...prev.metadata,
+                                ownerAddress: e.target.value,
+                              },
+                            }))
+                          }
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-4 mt-6">
+                      <h4 className="font-medium">Restricted Jurisdictions</h4>
+                      <div className="flex gap-2 mb-4">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            const allJurisdictions = [
+                              "Cuba",
+                              "North Korea",
+                              "Russia",
+                              "Donetsk",
+                              "Belarus",
+                              "Venezuela",
+                              "Democratic Republic of the Congo",
+                              "Lebanon",
+                              "Somalia",
+                              "Yemen",
+                              "Iran",
+                              "Syria",
+                              "Crimea",
+                              "Luhansk",
+                              "Myanmar",
+                              "Zimbabwe",
+                              "Iraq",
+                              "Libya",
+                              "Sudan",
+                            ];
+                            setTokenForm((prev) => ({
+                              ...prev,
+                              metadata: {
+                                ...prev.metadata,
+                                restrictedJurisdictions: allJurisdictions,
+                              },
+                            }));
+                          }}
+                        >
+                          Select All
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setTokenForm((prev) => ({
+                              ...prev,
+                              metadata: {
+                                ...prev.metadata,
+                                restrictedJurisdictions: [],
+                              },
+                            }));
+                          }}
+                        >
+                          Deselect All
+                        </Button>
+                      </div>
+
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                        {[
+                          "Cuba",
+                          "North Korea",
+                          "Russia",
+                          "Donetsk (Ukraine)",
+                          "Belarus",
+                          "Venezuela",
+                          "Democratic Republic of the Congo",
+                          "Lebanon",
+                          "Somalia",
+                          "Yemen",
+                          "Iran",
+                          "Syria",
+                          "Crimea (Ukraine)",
+                          "Luhansk (Ukraine)",
+                          "Myanmar (Burma)",
+                          "Zimbabwe",
+                          "Iraq",
+                          "Libya",
+                          "Sudan",
+                        ].map((jurisdiction) => (
+                          <div
+                            key={jurisdiction}
+                            className="flex items-center space-x-2"
+                          >
+                            <Checkbox
+                              id={`jurisdiction-${jurisdiction}`}
+                              checked={(
+                                tokenForm.metadata.restrictedJurisdictions || []
+                              ).includes(jurisdiction)}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  setTokenForm((prev) => ({
+                                    ...prev,
+                                    metadata: {
+                                      ...prev.metadata,
+                                      restrictedJurisdictions: [
+                                        ...(prev.metadata
+                                          .restrictedJurisdictions || []),
+                                        jurisdiction,
+                                      ],
+                                    },
+                                  }));
+                                } else {
+                                  setTokenForm((prev) => ({
+                                    ...prev,
+                                    metadata: {
+                                      ...prev.metadata,
+                                      restrictedJurisdictions: (
+                                        prev.metadata.restrictedJurisdictions ||
+                                        []
+                                      ).filter((j) => j !== jurisdiction),
+                                    },
+                                  }));
+                                }
+                              }}
+                            />
+                            <Label htmlFor={`jurisdiction-${jurisdiction}`}>
+                              {jurisdiction}
+                            </Label>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                      <div className="space-y-2">
+                        <Label htmlFor="issuanceDate">Issuance Date</Label>
+                        <Input
+                          id="issuanceDate"
+                          type="date"
+                          value={tokenForm.metadata.issuanceDate || ""}
+                          onChange={(e) =>
+                            setTokenForm((prev) => ({
+                              ...prev,
+                              metadata: {
+                                ...prev.metadata,
+                                issuanceDate: e.target.value,
+                              },
+                            }))
+                          }
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="maturityDate">Maturity Date</Label>
+                        <Input
+                          id="maturityDate"
+                          type="date"
+                          value={tokenForm.metadata.maturityDate || ""}
+                          onChange={(e) =>
+                            setTokenForm((prev) => ({
+                              ...prev,
+                              metadata: {
+                                ...prev.metadata,
+                                maturityDate: e.target.value,
+                              },
+                            }))
+                          }
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-4 mt-6">
+                      <h4 className="font-medium">Advanced Settings</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="transferRestrictions"
+                            checked={
+                              tokenForm.metadata.transferRestrictions || false
+                            }
+                            onCheckedChange={(checked) =>
+                              setTokenForm((prev) => ({
+                                ...prev,
+                                metadata: {
+                                  ...prev.metadata,
+                                  transferRestrictions: !!checked,
+                                },
+                              }))
+                            }
+                          />
+                          <div>
+                            <Label htmlFor="transferRestrictions">
+                              Transfer Restrictions
+                            </Label>
+                            <p className="text-xs text-muted-foreground">
+                              Limit trading to KYC-verified wallets
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="lockupPeriods"
+                            checked={tokenForm.metadata.lockupPeriods || false}
+                            onCheckedChange={(checked) =>
+                              setTokenForm((prev) => ({
+                                ...prev,
+                                metadata: {
+                                  ...prev.metadata,
+                                  lockupPeriods: !!checked,
+                                },
+                              }))
+                            }
+                          />
+                          <div>
+                            <Label htmlFor="lockupPeriods">
+                              Lock-up Periods
+                            </Label>
+                            <p className="text-xs text-muted-foreground">
+                              Prevent early selling
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="complianceModules"
+                            checked={
+                              tokenForm.metadata.complianceModules || false
+                            }
+                            onCheckedChange={(checked) =>
+                              setTokenForm((prev) => ({
+                                ...prev,
+                                metadata: {
+                                  ...prev.metadata,
+                                  complianceModules: !!checked,
+                                },
+                              }))
+                            }
+                          />
+                          <div>
+                            <Label htmlFor="complianceModules">
+                              Compliance Modules
+                            </Label>
+                            <p className="text-xs text-muted-foreground">
+                              Auto-restrict based on investor type
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4 mt-6">
+                      <h4 className="font-medium">Token Features</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="mintable"
+                            checked={tokenForm.metadata.mintable || false}
+                            onCheckedChange={(checked) =>
+                              setTokenForm((prev) => ({
+                                ...prev,
+                                metadata: {
+                                  ...prev.metadata,
+                                  mintable: !!checked,
+                                },
+                              }))
+                            }
+                          />
+                          <div>
+                            <Label htmlFor="mintable">Mintable</Label>
+                            <p className="text-xs text-muted-foreground">
+                              Allow creation of new tokens
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="burnable"
+                            checked={tokenForm.metadata.burnable || false}
+                            onCheckedChange={(checked) =>
+                              setTokenForm((prev) => ({
+                                ...prev,
+                                metadata: {
+                                  ...prev.metadata,
+                                  burnable: !!checked,
+                                },
+                              }))
+                            }
+                          />
+                          <div>
+                            <Label htmlFor="burnable">Burnable</Label>
+                            <p className="text-xs text-muted-foreground">
+                              Allow tokens to be destroyed
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="pausable"
+                            checked={tokenForm.metadata.pausable || false}
+                            onCheckedChange={(checked) =>
+                              setTokenForm((prev) => ({
+                                ...prev,
+                                metadata: {
+                                  ...prev.metadata,
+                                  pausable: !!checked,
+                                },
+                              }))
+                            }
+                          />
+                          <div>
+                            <Label htmlFor="pausable">Pausable</Label>
+                            <p className="text-xs text-muted-foreground">
+                              Enable emergency stop functionality
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4 mt-6 border-t pt-6">
+                      <h4 className="font-medium">ERC-1400 Metadata Editor</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                          <Label htmlFor="securityType">Security Type*</Label>
+                          <Select
+                            value={tokenForm.metadata.securityType || ""}
+                            onValueChange={(value) =>
+                              setTokenForm((prev) => ({
+                                ...prev,
+                                metadata: {
+                                  ...prev.metadata,
+                                  securityType: value,
+                                },
+                              }))
+                            }
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select security type" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="equity">Equity</SelectItem>
+                              <SelectItem value="debt">Debt</SelectItem>
+                              <SelectItem value="derivative">
+                                Derivative
+                              </SelectItem>
+                              <SelectItem value="fund">Fund</SelectItem>
+                              <SelectItem value="reit">REIT</SelectItem>
+                              <SelectItem value="other">Other</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="issuerName">Issuer Name*</Label>
+                          <Input
+                            id="issuerName"
+                            placeholder="Legal entity name"
+                            value={tokenForm.metadata.issuerName || ""}
+                            onChange={(e) =>
+                              setTokenForm((prev) => ({
+                                ...prev,
+                                metadata: {
+                                  ...prev.metadata,
+                                  issuerName: e.target.value,
+                                },
+                              }))
+                            }
+                          />
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="kycRequired"
+                            checked={tokenForm.metadata.kycRequired !== false} // Default to true
+                            onCheckedChange={(checked) =>
+                              setTokenForm((prev) => ({
+                                ...prev,
+                                metadata: {
+                                  ...prev.metadata,
+                                  kycRequired: !!checked,
+                                },
+                              }))
+                            }
+                          />
+                          <div>
+                            <Label htmlFor="kycRequired">KYC Required</Label>
+                            <p className="text-xs text-muted-foreground">
+                              Require KYC verification for token holders
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* ERC-3525 Configuration */}
+                {tokenForm.standard === "ERC-3525" && (
+                  <div className="space-y-6 border-t pt-6">
+                    <h3 className="text-lg font-medium">
+                      ERC-3525 Semi-Fungible Token Configuration
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <Label htmlFor="name">Token Name</Label>
+                        <Input
+                          id="name"
+                          name="name"
+                          placeholder="e.g., SemiFungibleToken"
+                          value={tokenForm.name}
+                          onChange={handleInputChange}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="symbol">Token Symbol</Label>
+                        <Input
+                          id="symbol"
+                          name="symbol"
+                          placeholder="e.g., SFT"
+                          value={tokenForm.symbol}
+                          onChange={handleInputChange}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="tokenId">Token ID</Label>
+                        <Input
+                          id="tokenId"
+                          type="number"
+                          min="1"
+                          placeholder="1"
+                          value={tokenForm.metadata.tokenId || "1"}
+                          onChange={(e) =>
+                            setTokenForm((prev) => ({
+                              ...prev,
+                              metadata: {
+                                ...prev.metadata,
+                                tokenId: e.target.value,
+                              },
+                            }))
+                          }
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="slot">Slot</Label>
+                        <Input
+                          id="slot"
+                          type="number"
+                          min="1"
+                          placeholder="1"
+                          value={tokenForm.metadata.slot || "1"}
+                          onChange={(e) =>
+                            setTokenForm((prev) => ({
+                              ...prev,
+                              metadata: {
+                                ...prev.metadata,
+                                slot: e.target.value,
+                              },
+                            }))
+                          }
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="value">Value</Label>
+                        <Input
+                          id="value"
+                          type="number"
+                          min="0"
+                          placeholder="100"
+                          value={tokenForm.metadata.value || "100"}
+                          onChange={(e) =>
+                            setTokenForm((prev) => ({
+                              ...prev,
+                              metadata: {
+                                ...prev.metadata,
+                                value: e.target.value,
+                              },
+                            }))
+                          }
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="nav">NAV (Net Asset Value)</Label>
+                        <Input
+                          id="nav"
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          placeholder="1.00"
+                          value={tokenForm.metadata.nav || "1.00"}
+                          onChange={(e) =>
+                            setTokenForm((prev) => ({
+                              ...prev,
+                              metadata: {
+                                ...prev.metadata,
+                                nav: e.target.value,
+                              },
+                            }))
+                          }
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="ownerAddress">
+                          Owner Address (ETH Wallet)
+                        </Label>
+                        <Input
+                          id="ownerAddress"
+                          placeholder="0x..."
+                          value={tokenForm.metadata.ownerAddress || ""}
+                          onChange={(e) =>
+                            setTokenForm((prev) => ({
+                              ...prev,
+                              metadata: {
+                                ...prev.metadata,
+                                ownerAddress: e.target.value,
+                              },
+                            }))
+                          }
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-4 mt-6">
+                      <h4 className="font-medium">Advanced Settings</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="splitMerge"
+                            checked={tokenForm.metadata.splitMerge || false}
+                            onCheckedChange={(checked) =>
+                              setTokenForm((prev) => ({
+                                ...prev,
+                                metadata: {
+                                  ...prev.metadata,
+                                  splitMerge: !!checked,
+                                },
+                              }))
+                            }
+                          />
+                          <div>
+                            <Label htmlFor="splitMerge">
+                              Split/Merge Functionality
+                            </Label>
+                            <p className="text-xs text-muted-foreground">
+                              Enable dynamic token management
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="redeemableValue"
+                            checked={
+                              tokenForm.metadata.redeemableValue || false
+                            }
+                            onCheckedChange={(checked) =>
+                              setTokenForm((prev) => ({
+                                ...prev,
+                                metadata: {
+                                  ...prev.metadata,
+                                  redeemableValue: !!checked,
+                                },
+                              }))
+                            }
+                          />
+                          <div>
+                            <Label htmlFor="redeemableValue">
+                              Redeemable Value
+                            </Label>
+                            <p className="text-xs text-muted-foreground">
+                              Set rules for cashing out
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="expiration"
+                            checked={tokenForm.metadata.expiration || false}
+                            onCheckedChange={(checked) =>
+                              setTokenForm((prev) => ({
+                                ...prev,
+                                metadata: {
+                                  ...prev.metadata,
+                                  expiration: !!checked,
+                                },
+                              }))
+                            }
+                          />
+                          <div>
+                            <Label htmlFor="expiration">Expiration</Label>
+                            <p className="text-xs text-muted-foreground">
+                              Auto-revoke tokens on a set date
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4 mt-6">
+                      <h4 className="font-medium">Token Features</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="mintable"
+                            checked={tokenForm.metadata.mintable || false}
+                            onCheckedChange={(checked) =>
+                              setTokenForm((prev) => ({
+                                ...prev,
+                                metadata: {
+                                  ...prev.metadata,
+                                  mintable: !!checked,
+                                },
+                              }))
+                            }
+                          />
+                          <div>
+                            <Label htmlFor="mintable">Mintable</Label>
+                            <p className="text-xs text-muted-foreground">
+                              Allow creation of new tokens
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="burnable"
+                            checked={tokenForm.metadata.burnable || false}
+                            onCheckedChange={(checked) =>
+                              setTokenForm((prev) => ({
+                                ...prev,
+                                metadata: {
+                                  ...prev.metadata,
+                                  burnable: !!checked,
+                                },
+                              }))
+                            }
+                          />
+                          <div>
+                            <Label htmlFor="burnable">Burnable</Label>
+                            <p className="text-xs text-muted-foreground">
+                              Allow tokens to be destroyed
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="pausable"
+                            checked={tokenForm.metadata.pausable || false}
+                            onCheckedChange={(checked) =>
+                              setTokenForm((prev) => ({
+                                ...prev,
+                                metadata: {
+                                  ...prev.metadata,
+                                  pausable: !!checked,
+                                },
+                              }))
+                            }
+                          />
+                          <div>
+                            <Label htmlFor="pausable">Pausable</Label>
+                            <p className="text-xs text-muted-foreground">
+                              Enable emergency stop functionality
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="transferRestrictions"
+                            checked={
+                              tokenForm.metadata.transferRestrictions || false
+                            }
+                            onCheckedChange={(checked) =>
+                              setTokenForm((prev) => ({
+                                ...prev,
+                                metadata: {
+                                  ...prev.metadata,
+                                  transferRestrictions: !!checked,
+                                },
+                              }))
+                            }
+                          />
+                          <div>
+                            <Label htmlFor="transferRestrictions">
+                              Transfer Restrictions
+                            </Label>
+                            <p className="text-xs text-muted-foreground">
+                              Limit transfers based on rules
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4 mt-6 border-t pt-6">
+                      <h4 className="font-medium">ERC-3525 Metadata Editor</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                          <Label htmlFor="slotDescription">
+                            Slot Description*
+                          </Label>
+                          <Input
+                            id="slotDescription"
+                            placeholder="Description of this slot"
+                            value={tokenForm.metadata.slotDescription || ""}
+                            onChange={(e) =>
+                              setTokenForm((prev) => ({
+                                ...prev,
+                                metadata: {
+                                  ...prev.metadata,
+                                  slotDescription: e.target.value,
+                                },
+                              }))
+                            }
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="valueUnit">Value Unit*</Label>
+                          <Input
+                            id="valueUnit"
+                            placeholder="e.g., USD, Shares, Points"
+                            value={tokenForm.metadata.valueUnit || ""}
+                            onChange={(e) =>
+                              setTokenForm((prev) => ({
+                                ...prev,
+                                metadata: {
+                                  ...prev.metadata,
+                                  valueUnit: e.target.value,
+                                },
+                              }))
+                            }
+                          />
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="allowsValueTransfer"
+                            checked={
+                              tokenForm.metadata.allowsValueTransfer !== false
+                            } // Default to true
+                            onCheckedChange={(checked) =>
+                              setTokenForm((prev) => ({
+                                ...prev,
+                                metadata: {
+                                  ...prev.metadata,
+                                  allowsValueTransfer: !!checked,
+                                },
+                              }))
+                            }
+                          />
+                          <div>
+                            <Label htmlFor="allowsValueTransfer">
+                              Allows Value Transfer
+                            </Label>
+                            <p className="text-xs text-muted-foreground">
+                              Enable transferring value between tokens
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* ERC-4626 Configuration */}
+                {tokenForm.standard === "ERC-4626" && (
+                  <div className="space-y-6 border-t pt-6">
+                    <h3 className="text-lg font-medium">
+                      ERC-4626 Tokenized Vault Configuration
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <Label htmlFor="name">Vault Name</Label>
+                        <Input
+                          id="name"
+                          name="name"
+                          placeholder="e.g., Yield Vault"
+                          value={tokenForm.name}
+                          onChange={handleInputChange}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="symbol">Symbol</Label>
+                        <Input
+                          id="symbol"
+                          name="symbol"
+                          placeholder="e.g., yVAULT"
+                          value={tokenForm.symbol}
+                          onChange={handleInputChange}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="totalAssets">Total Assets</Label>
+                        <Input
+                          id="totalAssets"
+                          type="number"
+                          min="0"
+                          placeholder="0"
+                          value={tokenForm.metadata.totalAssets || "0"}
+                          onChange={(e) =>
+                            setTokenForm((prev) => ({
+                              ...prev,
+                              metadata: {
+                                ...prev.metadata,
+                                totalAssets: e.target.value,
+                              },
+                            }))
+                          }
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="ownerAddress">
+                          Owner Address (ETH Wallet)
+                        </Label>
+                        <Input
+                          id="ownerAddress"
+                          placeholder="0x..."
+                          value={tokenForm.metadata.ownerAddress || ""}
+                          onChange={(e) =>
+                            setTokenForm((prev) => ({
+                              ...prev,
+                              metadata: {
+                                ...prev.metadata,
+                                ownerAddress: e.target.value,
+                              },
+                            }))
+                          }
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-4 mt-6">
+                      <h4 className="font-medium">Vault Functions</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="deposit"
+                            checked={tokenForm.metadata.deposit !== false} // Default to true
+                            onCheckedChange={(checked) =>
+                              setTokenForm((prev) => ({
+                                ...prev,
+                                metadata: {
+                                  ...prev.metadata,
+                                  deposit: !!checked,
+                                },
+                              }))
+                            }
+                          />
+                          <div>
+                            <Label htmlFor="deposit">Deposit</Label>
+                            <p className="text-xs text-muted-foreground">
+                              Deposit assets into vault
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="withdraw"
+                            checked={tokenForm.metadata.withdraw !== false} // Default to true
+                            onCheckedChange={(checked) =>
+                              setTokenForm((prev) => ({
+                                ...prev,
+                                metadata: {
+                                  ...prev.metadata,
+                                  withdraw: !!checked,
+                                },
+                              }))
+                            }
+                          />
+                          <div>
+                            <Label htmlFor="withdraw">Withdraw</Label>
+                            <p className="text-xs text-muted-foreground">
+                              Withdraw from vault
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="convertToShares"
+                            checked={
+                              tokenForm.metadata.convertToShares !== false
+                            } // Default to true
+                            onCheckedChange={(checked) =>
+                              setTokenForm((prev) => ({
+                                ...prev,
+                                metadata: {
+                                  ...prev.metadata,
+                                  convertToShares: !!checked,
+                                },
+                              }))
+                            }
+                          />
+                          <div>
+                            <Label htmlFor="convertToShares">
+                              Convert to Shares
+                            </Label>
+                            <p className="text-xs text-muted-foreground">
+                              Convert deposits to vault shares
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="convertToAssets"
+                            checked={
+                              tokenForm.metadata.convertToAssets !== false
+                            } // Default to true
+                            onCheckedChange={(checked) =>
+                              setTokenForm((prev) => ({
+                                ...prev,
+                                metadata: {
+                                  ...prev.metadata,
+                                  convertToAssets: !!checked,
+                                },
+                              }))
+                            }
+                          />
+                          <div>
+                            <Label htmlFor="convertToAssets">
+                              Convert to Assets
+                            </Label>
+                            <p className="text-xs text-muted-foreground">
+                              Convert shares to underlying assets
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="maxWithdraw"
+                            checked={tokenForm.metadata.maxWithdraw !== false} // Default to true
+                            onCheckedChange={(checked) =>
+                              setTokenForm((prev) => ({
+                                ...prev,
+                                metadata: {
+                                  ...prev.metadata,
+                                  maxWithdraw: !!checked,
+                                },
+                              }))
+                            }
+                          />
+                          <div>
+                            <Label htmlFor="maxWithdraw">Max Withdraw</Label>
+                            <p className="text-xs text-muted-foreground">
+                              Get max allowable withdrawal
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4 mt-6">
+                      <h4 className="font-medium">Token Features</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="mintable"
+                            checked={tokenForm.metadata.mintable || false}
+                            onCheckedChange={(checked) =>
+                              setTokenForm((prev) => ({
+                                ...prev,
+                                metadata: {
+                                  ...prev.metadata,
+                                  mintable: !!checked,
+                                },
+                              }))
+                            }
+                          />
+                          <div>
+                            <Label htmlFor="mintable">Mintable</Label>
+                            <p className="text-xs text-muted-foreground">
+                              Allow creation of new tokens
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="burnable"
+                            checked={tokenForm.metadata.burnable || false}
+                            onCheckedChange={(checked) =>
+                              setTokenForm((prev) => ({
+                                ...prev,
+                                metadata: {
+                                  ...prev.metadata,
+                                  burnable: !!checked,
+                                },
+                              }))
+                            }
+                          />
+                          <div>
+                            <Label htmlFor="burnable">Burnable</Label>
+                            <p className="text-xs text-muted-foreground">
+                              Allow tokens to be destroyed
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="pausable"
+                            checked={tokenForm.metadata.pausable || false}
+                            onCheckedChange={(checked) =>
+                              setTokenForm((prev) => ({
+                                ...prev,
+                                metadata: {
+                                  ...prev.metadata,
+                                  pausable: !!checked,
+                                },
+                              }))
+                            }
+                          />
+                          <div>
+                            <Label htmlFor="pausable">Pausable</Label>
+                            <p className="text-xs text-muted-foreground">
+                              Enable emergency stop functionality
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="transferRestrictions"
+                            checked={
+                              tokenForm.metadata.transferRestrictions || false
+                            }
+                            onCheckedChange={(checked) =>
+                              setTokenForm((prev) => ({
+                                ...prev,
+                                metadata: {
+                                  ...prev.metadata,
+                                  transferRestrictions: !!checked,
+                                },
+                              }))
+                            }
+                          />
+                          <div>
+                            <Label htmlFor="transferRestrictions">
+                              Transfer Restrictions
+                            </Label>
+                            <p className="text-xs text-muted-foreground">
+                              Limit transfers based on rules
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4 mt-6 border-t pt-6">
+                      <h4 className="font-medium">ERC-4626 Metadata Editor</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                          <Label htmlFor="underlyingAsset">
+                            Underlying Asset*
+                          </Label>
+                          <Select
+                            value={tokenForm.metadata.underlyingAsset || ""}
+                            onValueChange={(value) =>
+                              setTokenForm((prev) => ({
+                                ...prev,
+                                metadata: {
+                                  ...prev.metadata,
+                                  underlyingAsset: value,
+                                },
+                              }))
+                            }
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select asset" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="ETH">ETH</SelectItem>
+                              <SelectItem value="USDC">USDC</SelectItem>
+                              <SelectItem value="USDT">USDT</SelectItem>
+                              <SelectItem value="DAI">DAI</SelectItem>
+                              <SelectItem value="WBTC">WBTC</SelectItem>
+                              <SelectItem value="OTHER">Other</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="yieldStrategy">Yield Strategy*</Label>
+                          <Select
+                            value={tokenForm.metadata.yieldStrategy || ""}
+                            onValueChange={(value) =>
+                              setTokenForm((prev) => ({
+                                ...prev,
+                                metadata: {
+                                  ...prev.metadata,
+                                  yieldStrategy: value,
+                                },
+                              }))
+                            }
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select strategy" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="LENDING">Lending</SelectItem>
+                              <SelectItem value="STAKING">Staking</SelectItem>
+                              <SelectItem value="LIQUIDITY">
+                                Liquidity Provision
+                              </SelectItem>
+                              <SelectItem value="YIELD_FARMING">
+                                Yield Farming
+                              </SelectItem>
+                              <SelectItem value="ARBITRAGE">
+                                Arbitrage
+                              </SelectItem>
+                              <SelectItem value="CUSTOM">Custom</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="managementFee">
+                            Management Fee (%)
+                          </Label>
+                          <Input
+                            id="managementFee"
+                            type="number"
+                            min="0"
+                            max="100"
+                            step="0.01"
+                            placeholder="2.0"
+                            value={tokenForm.metadata.managementFee || ""}
+                            onChange={(e) =>
+                              setTokenForm((prev) => ({
+                                ...prev,
+                                metadata: {
+                                  ...prev.metadata,
+                                  managementFee: e.target.value,
+                                },
+                              }))
+                            }
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="performanceFee">
+                            Performance Fee (%)
+                          </Label>
+                          <Input
+                            id="performanceFee"
+                            type="number"
+                            min="0"
+                            max="100"
+                            step="0.01"
+                            placeholder="20.0"
+                            value={tokenForm.metadata.performanceFee || ""}
+                            onChange={(e) =>
+                              setTokenForm((prev) => ({
+                                ...prev,
+                                metadata: {
+                                  ...prev.metadata,
+                                  performanceFee: e.target.value,
+                                },
+                              }))
+                            }
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* Dates for structured products */}
                 {(tokenForm.standard === "ERC-3525" ||
@@ -1672,11 +3974,276 @@ ${metadata.tranches.map((tranche) => `        _createTranche(${tranche.id}, "${t
                   </div>
                 )}
 
+                {/* Fund & ETF Configuration */}
+                {(tokenForm.standard.includes("ERC-4626") ||
+                  tokenForm.metadata.product.includes("Fund Token")) && (
+                  <div className="space-y-4 border-t pt-6">
+                    <h3 className="text-lg font-medium">Fund Parameters</h3>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <Label htmlFor="underlying-asset">
+                          Underlying Asset
+                        </Label>
+                        <Select
+                          value={tokenForm.metadata.underlyingAsset || "ETH"}
+                          onValueChange={(value) =>
+                            setTokenForm((prev) => ({
+                              ...prev,
+                              metadata: {
+                                ...prev.metadata,
+                                underlyingAsset: value,
+                              },
+                            }))
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select underlying asset" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="ETH">ETH</SelectItem>
+                            <SelectItem value="USDC">USDC</SelectItem>
+                            <SelectItem value="USDT">USDT</SelectItem>
+                            <SelectItem value="DAI">DAI</SelectItem>
+                            <SelectItem value="BTC">BTC</SelectItem>
+                            <SelectItem value="MIXED">Mixed Assets</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="yield-strategy">Yield Strategy</Label>
+                        <Select
+                          value={tokenForm.metadata.yieldStrategy || "STAKING"}
+                          onValueChange={(value) =>
+                            setTokenForm((prev) => ({
+                              ...prev,
+                              metadata: {
+                                ...prev.metadata,
+                                yieldStrategy: value,
+                              },
+                            }))
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select yield strategy" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="STAKING">Staking</SelectItem>
+                            <SelectItem value="LENDING">Lending</SelectItem>
+                            <SelectItem value="LIQUIDITY">
+                              Liquidity Provision
+                            </SelectItem>
+                            <SelectItem value="YIELD_FARMING">
+                              Yield Farming
+                            </SelectItem>
+                            <SelectItem value="ARBITRAGE">Arbitrage</SelectItem>
+                            <SelectItem value="CUSTOM">
+                              Custom Strategy
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="min-deposit">Minimum Deposit</Label>
+                        <Input
+                          id="min-deposit"
+                          type="number"
+                          min="0"
+                          placeholder="0"
+                          value={tokenForm.metadata.minDeposit || ""}
+                          onChange={(e) =>
+                            setTokenForm((prev) => ({
+                              ...prev,
+                              metadata: {
+                                ...prev.metadata,
+                                minDeposit: e.target.value,
+                              },
+                            }))
+                          }
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="max-deposit">Maximum Deposit</Label>
+                        <Input
+                          id="max-deposit"
+                          type="number"
+                          min="0"
+                          placeholder="No limit"
+                          value={tokenForm.metadata.maxDeposit || ""}
+                          onChange={(e) =>
+                            setTokenForm((prev) => ({
+                              ...prev,
+                              metadata: {
+                                ...prev.metadata,
+                                maxDeposit: e.target.value,
+                              },
+                            }))
+                          }
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="redemption-notice">
+                          Redemption Notice Period (Days)
+                        </Label>
+                        <Input
+                          id="redemption-notice"
+                          type="number"
+                          min="0"
+                          placeholder="30"
+                          value={
+                            tokenForm.metadata.redemptionNoticeDays || "30"
+                          }
+                          onChange={(e) =>
+                            setTokenForm((prev) => ({
+                              ...prev,
+                              metadata: {
+                                ...prev.metadata,
+                                redemptionNoticeDays: e.target.value,
+                              },
+                            }))
+                          }
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="management-fee">
+                          Management Fee (%)
+                        </Label>
+                        <Input
+                          id="management-fee"
+                          type="number"
+                          min="0"
+                          max="100"
+                          step="0.01"
+                          placeholder="2.0"
+                          value={tokenForm.metadata.managementFee || "2.0"}
+                          onChange={(e) =>
+                            setTokenForm((prev) => ({
+                              ...prev,
+                              metadata: {
+                                ...prev.metadata,
+                                managementFee: e.target.value,
+                              },
+                            }))
+                          }
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2 mt-4">
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="nav-oracle"
+                          checked={tokenForm.metadata.navOracleEnabled || false}
+                          onCheckedChange={(checked) =>
+                            setTokenForm((prev) => ({
+                              ...prev,
+                              metadata: {
+                                ...prev.metadata,
+                                navOracleEnabled: !!checked,
+                              },
+                            }))
+                          }
+                        />
+                        <Label htmlFor="nav-oracle">
+                          Enable Oracle-based NAV Calculation
+                        </Label>
+                      </div>
+                      <p className="text-xs text-muted-foreground ml-6">
+                        When enabled, NAV will be calculated automatically using
+                        price oracles. Otherwise, NAV will be updated manually
+                        by the fund manager.
+                      </p>
+                    </div>
+
+                    <div className="space-y-2 mt-4">
+                      <Label htmlFor="erc20-conversion">
+                        ERC-20 Conversion Rate
+                      </Label>
+                      <Input
+                        id="erc20-conversion"
+                        type="number"
+                        min="0"
+                        step="0.000001"
+                        placeholder="1.0"
+                        value={tokenForm.metadata.erc20ConversionRate || "1.0"}
+                        onChange={(e) =>
+                          setTokenForm((prev) => ({
+                            ...prev,
+                            metadata: {
+                              ...prev.metadata,
+                              erc20ConversionRate: e.target.value,
+                            },
+                          }))
+                        }
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Rate at which fund tokens can be converted to ERC-20
+                        tokens for liquidity
+                      </p>
+                    </div>
+
+                    <div className="p-4 bg-blue-50 border border-blue-100 rounded-md mt-4">
+                      <h4 className="font-medium text-blue-800 mb-2">
+                        NAV Preview
+                      </h4>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-blue-700">
+                          Initial NAV per Token:
+                        </span>
+                        <span className="font-medium">
+                          {tokenForm.metadata.underlyingAsset || "ETH"}{" "}
+                          {(1.0).toFixed(6)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center mt-1">
+                        <span className="text-sm text-blue-700">
+                          Management Fee Impact (Annual):
+                        </span>
+                        <span className="font-medium text-red-600">
+                          -
+                          {parseFloat(
+                            tokenForm.metadata.managementFee || "2.0",
+                          ).toFixed(2)}
+                          %
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center mt-1">
+                        <span className="text-sm text-blue-700">
+                          Estimated Yield (Annual):
+                        </span>
+                        <span className="font-medium text-green-600">
+                          +
+                          {tokenForm.metadata.yieldStrategy === "STAKING"
+                            ? "5.2"
+                            : tokenForm.metadata.yieldStrategy === "LENDING"
+                              ? "3.8"
+                              : tokenForm.metadata.yieldStrategy === "LIQUIDITY"
+                                ? "8.5"
+                                : tokenForm.metadata.yieldStrategy ===
+                                    "YIELD_FARMING"
+                                  ? "12.4"
+                                  : tokenForm.metadata.yieldStrategy ===
+                                      "ARBITRAGE"
+                                    ? "7.6"
+                                    : "6.0"}
+                          %
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* Compliance settings for structured products */}
-                {(tokenForm.standard === "ERC-1400" ||
+                {(tokenForm.standard.includes("ERC-1400") ||
                   tokenForm.standard === "ERC-3525" ||
                   tokenForm.metadata.product.includes("Structured Product") ||
-                  tokenForm.metadata.product.includes("Credit Linked")) && (
+                  tokenForm.metadata.product.includes("Credit Linked") ||
+                  tokenForm.metadata.product.includes("Fund Token")) && (
                   <div className="space-y-4 border-t pt-6">
                     <h3 className="text-lg font-medium">Compliance Settings</h3>
 
@@ -1755,137 +4322,6 @@ ${metadata.tranches.map((tranche) => `        _createTranche(${tranche.id}, "${t
                     </div>
                   </div>
                 )}
-
-                {/* Building Blocks */}
-                <div className="space-y-4">
-                  <h3 className="text-lg font-medium">Token Building Blocks</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Configure the building blocks for your token to define its
-                    behavior and compliance requirements.
-                  </p>
-
-                  <Accordion type="multiple" className="w-full">
-                    {/* Compliance Building Blocks */}
-                    <AccordionItem value="compliance">
-                      <AccordionTrigger>Compliance Controls</AccordionTrigger>
-                      <AccordionContent>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          {BUILDING_BLOCKS.compliance.map((block) => (
-                            <div
-                              key={block.id}
-                              className="flex items-start space-x-3 p-3 border rounded-md hover:bg-muted/20 cursor-pointer"
-                              onClick={() =>
-                                handleBlockToggle("compliance", block.name)
-                              }
-                            >
-                              <Checkbox
-                                checked={tokenForm.blocks.compliance.includes(
-                                  block.name,
-                                )}
-                                onCheckedChange={() =>
-                                  handleBlockToggle("compliance", block.name)
-                                }
-                              />
-                              <div>
-                                <Label className="font-medium">
-                                  {block.name}
-                                </Label>
-                                <p className="text-sm text-muted-foreground">
-                                  {block.description}
-                                </p>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </AccordionContent>
-                    </AccordionItem>
-
-                    {/* Features Building Blocks */}
-                    <AccordionItem value="features">
-                      <AccordionTrigger>Token Features</AccordionTrigger>
-                      <AccordionContent>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          {BUILDING_BLOCKS.features.map((block) => (
-                            <div
-                              key={block.id}
-                              className="flex items-start space-x-3 p-3 border rounded-md hover:bg-muted/20 cursor-pointer"
-                              onClick={() =>
-                                handleBlockToggle("features", block.name)
-                              }
-                            >
-                              <Checkbox
-                                checked={tokenForm.blocks.features.includes(
-                                  block.name,
-                                )}
-                                onCheckedChange={() =>
-                                  handleBlockToggle("features", block.name)
-                                }
-                              />
-                              <div>
-                                <Label className="font-medium">
-                                  {block.name}
-                                </Label>
-                                <p className="text-sm text-muted-foreground">
-                                  {block.description}
-                                </p>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </AccordionContent>
-                    </AccordionItem>
-
-                    {/* Governance Building Blocks */}
-                    <AccordionItem value="governance">
-                      <AccordionTrigger>Governance Model</AccordionTrigger>
-                      <AccordionContent>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          {BUILDING_BLOCKS.governance.map((block) => (
-                            <div
-                              key={block.id}
-                              className="flex items-start space-x-3 p-3 border rounded-md hover:bg-muted/20 cursor-pointer"
-                              onClick={() =>
-                                handleBlockToggle("governance", block.name)
-                              }
-                            >
-                              <Checkbox
-                                checked={tokenForm.blocks.governance.includes(
-                                  block.name,
-                                )}
-                                onCheckedChange={() =>
-                                  handleBlockToggle("governance", block.name)
-                                }
-                              />
-                              <div>
-                                <Label className="font-medium">
-                                  {block.name}
-                                </Label>
-                                <p className="text-sm text-muted-foreground">
-                                  {block.description}
-                                </p>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </AccordionContent>
-                    </AccordionItem>
-                  </Accordion>
-                </div>
-
-                {/* Contract Preview */}
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <h3 className="text-lg font-medium">Contract Preview</h3>
-                    <Button variant="outline" size="sm">
-                      <Copy className="h-4 w-4 mr-2" /> Copy Code
-                    </Button>
-                  </div>
-                  <div className="bg-black text-white p-4 rounded-md overflow-x-auto">
-                    <pre className="text-sm">
-                      {generateContractPreview() || "// No preview available"}
-                    </pre>
-                  </div>
-                </div>
               </div>
             </CardContent>
           </Card>
