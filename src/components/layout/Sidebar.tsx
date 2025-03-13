@@ -13,6 +13,8 @@ import {
   FileCheck,
   Shield,
   Coins,
+  ShieldCheck,
+  UserRoundCog,
 } from "lucide-react";
 
 interface SidebarItemProps {
@@ -114,6 +116,18 @@ const Sidebar = () => {
           MANAGEMENT
         </h3>
         <div className="space-y-1">
+        	<SidebarItem
+  				icon={<UserRoundCog className="h-4 w-4" />}
+  				label="Role Management"
+  				href="/role-management"
+  				active={pathname.startsWith("/role-management")}
+		  />
+  			<SidebarItem
+    			icon={<ShieldCheck className="h-4 w-4" />}
+    			label="Rule Management"
+    			href="/rule-management"
+    			active={pathname === "/rule-management"}
+  		  />
           <SidebarItem
             icon={<Settings className="h-4 w-4" />}
             label="Settings"

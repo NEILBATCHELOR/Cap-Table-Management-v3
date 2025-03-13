@@ -799,3 +799,821 @@ export type CompositeTypes<
   : PublicCompositeTypeNameOrOptions extends keyof PublicSchema["CompositeTypes"]
     ? PublicSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
     : never
+      admin_users: {
+      business_owners: {
+          address_proof_url: string | null
+          date_of_birth: string
+          full_name: string
+          nationality: string
+          organization_id: string | null
+          ownership_percentage: number
+          passport_url: string | null
+          risk_score: number | null
+          verification_status: string | null
+          address_proof_url?: string | null
+          date_of_birth: string
+          full_name: string
+          nationality: string
+          organization_id?: string | null
+          ownership_percentage: number
+          passport_url?: string | null
+          risk_score?: number | null
+          verification_status?: string | null
+          address_proof_url?: string | null
+          date_of_birth?: string
+          full_name?: string
+          nationality?: string
+          organization_id?: string | null
+          ownership_percentage?: number
+          passport_url?: string | null
+          risk_score?: number | null
+          verification_status?: string | null
+            foreignKeyName: "business_owners_organization_id_fkey"
+            columns: ["organization_id"]
+            referencedRelation: "organization_details"
+      company_details: {
+          company_name: string
+          company_type: string
+          is_regulated: boolean | null
+          registration_number: string | null
+          regulatory_status: string | null
+          company_name: string
+          company_type: string
+          is_regulated?: boolean | null
+          registration_number?: string | null
+          regulatory_status?: string | null
+          company_name?: string
+          company_type?: string
+          is_regulated?: boolean | null
+          registration_number?: string | null
+          regulatory_status?: string | null
+      company_directors: {
+          address_document_id: string | null
+          company_id: string
+          full_name: string
+          passport_document_id: string | null
+          position: string
+          address_document_id?: string | null
+          company_id: string
+          full_name: string
+          passport_document_id?: string | null
+          position: string
+          address_document_id?: string | null
+          company_id?: string
+          full_name?: string
+          passport_document_id?: string | null
+          position?: string
+            foreignKeyName: "company_directors_address_document_id_fkey"
+            columns: ["address_document_id"]
+            referencedRelation: "kyc_documents"
+            foreignKeyName: "company_directors_company_id_fkey"
+            columns: ["company_id"]
+            referencedRelation: "company_details"
+            foreignKeyName: "company_directors_passport_document_id_fkey"
+            columns: ["passport_document_id"]
+            referencedRelation: "kyc_documents"
+      company_shareholders: {
+          address_document_id: string | null
+          company_id: string
+          full_name: string
+          ownership_percentage: number
+          passport_document_id: string | null
+          address_document_id?: string | null
+          company_id: string
+          full_name: string
+          ownership_percentage: number
+          passport_document_id?: string | null
+          address_document_id?: string | null
+          company_id?: string
+          full_name?: string
+          ownership_percentage?: number
+          passport_document_id?: string | null
+            foreignKeyName: "company_shareholders_address_document_id_fkey"
+            columns: ["address_document_id"]
+            referencedRelation: "kyc_documents"
+            foreignKeyName: "company_shareholders_company_id_fkey"
+            columns: ["company_id"]
+            referencedRelation: "company_details"
+            foreignKeyName: "company_shareholders_passport_document_id_fkey"
+            columns: ["passport_document_id"]
+            referencedRelation: "kyc_documents"
+      compliance_documents: {
+          document_type: string
+          document_url: string
+          guardian_verification: Json | null
+          organization_id: string | null
+          risk_classification: string | null
+          verification_status: string | null
+          document_type: string
+          document_url: string
+          guardian_verification?: Json | null
+          organization_id?: string | null
+          risk_classification?: string | null
+          verification_status?: string | null
+          document_type?: string
+          document_url?: string
+          guardian_verification?: Json | null
+          organization_id?: string | null
+          risk_classification?: string | null
+          verification_status?: string | null
+            foreignKeyName: "compliance_documents_organization_id_fkey"
+            columns: ["organization_id"]
+            referencedRelation: "organization_details"
+      compliance_rules: {
+          eligible_jurisdictions: string[]
+          issuer_id: string
+          max_investors: number | null
+          title: string
+          transfer_restrictions: Json | null
+          eligible_jurisdictions?: string[]
+          issuer_id: string
+          max_investors?: number | null
+          title: string
+          transfer_restrictions?: Json | null
+          eligible_jurisdictions?: string[]
+          issuer_id?: string
+          max_investors?: number | null
+          title?: string
+          transfer_restrictions?: Json | null
+      email_templates: {
+          html_content: string
+          subject: string
+          html_content: string
+          subject: string
+          html_content?: string
+          subject?: string
+      investor_documents: {
+          document_type: string
+          document_url: string
+          verification_status:
+            | Database["public"]["Enums"]["verification_status"]
+            | null
+          verified_at: string | null
+          document_type: string
+          document_url: string
+          verification_status?:
+            | Database["public"]["Enums"]["verification_status"]
+            | null
+          verified_at?: string | null
+          document_type?: string
+          document_url?: string
+          verification_status?:
+            | Database["public"]["Enums"]["verification_status"]
+            | null
+          verified_at?: string | null
+      investor_profiles: {
+          chain_id: string | null
+          country: string
+          date_of_birth: string | null
+          financial_profile: Json | null
+          investment_profile: Json | null
+          investor_type: string
+          is_qualified: boolean | null
+          nationality: string | null
+          residency_address: Json | null
+          chain_id?: string | null
+          country: string
+          date_of_birth?: string | null
+          financial_profile?: Json | null
+          investment_profile?: Json | null
+          investor_type: string
+          is_qualified?: boolean | null
+          nationality?: string | null
+          residency_address?: Json | null
+          chain_id?: string | null
+          country?: string
+          date_of_birth?: string | null
+          financial_profile?: Json | null
+          investment_profile?: Json | null
+          investor_type?: string
+          is_qualified?: boolean | null
+          nationality?: string | null
+          residency_address?: Json | null
+      investor_wallets: {
+          is_verified: boolean | null
+          wallet_address: string
+          wallet_type: string
+          is_verified?: boolean | null
+          wallet_address: string
+          wallet_type: string
+          is_verified?: boolean | null
+          wallet_address?: string
+          wallet_type?: string
+          accreditation_status:
+            | Database["public"]["Enums"]["accreditation_status"]
+            | null
+          country: string | null
+          kyc_date: string | null
+          kyc_status: Database["public"]["Enums"]["kyc_status"] | null
+          status: Database["public"]["Enums"]["investor_status"] | null
+          type: Database["public"]["Enums"]["investor_type"]
+          accreditation_status?:
+            | Database["public"]["Enums"]["accreditation_status"]
+            | null
+          country?: string | null
+          kyc_date?: string | null
+          kyc_status?: Database["public"]["Enums"]["kyc_status"] | null
+          status?: Database["public"]["Enums"]["investor_status"] | null
+          type: Database["public"]["Enums"]["investor_type"]
+          accreditation_status?:
+            | Database["public"]["Enums"]["accreditation_status"]
+            | null
+          country?: string | null
+          kyc_date?: string | null
+          kyc_status?: Database["public"]["Enums"]["kyc_status"] | null
+          status?: Database["public"]["Enums"]["investor_status"] | null
+          type?: Database["public"]["Enums"]["investor_type"]
+      issuer_documents: {
+          document_type: string
+          document_url: string
+          verification_status:
+            | Database["public"]["Enums"]["verification_status"]
+            | null
+          verified_at: string | null
+          document_type: string
+          document_url: string
+          verification_status?:
+            | Database["public"]["Enums"]["verification_status"]
+            | null
+          verified_at?: string | null
+          document_type?: string
+          document_url?: string
+          verification_status?:
+            | Database["public"]["Enums"]["verification_status"]
+            | null
+          verified_at?: string | null
+      issuer_profiles: {
+          business_description: string | null
+          company_name: string
+          company_type: string
+          is_regulated: boolean | null
+          jurisdiction: string
+          registration_number: string | null
+          regulatory_status: string | null
+          business_description?: string | null
+          company_name: string
+          company_type: string
+          is_regulated?: boolean | null
+          jurisdiction: string
+          registration_number?: string | null
+          regulatory_status?: string | null
+          business_description?: string | null
+          company_name?: string
+          company_type?: string
+          is_regulated?: boolean | null
+          jurisdiction?: string
+          registration_number?: string | null
+          regulatory_status?: string | null
+      issuer_registrations: {
+          business_email: string
+          country: string
+          email_verified: boolean | null
+          organization_name: string
+          registration_status: string | null
+          terms_accepted: boolean | null
+          business_email: string
+          country: string
+          email_verified?: boolean | null
+          organization_name: string
+          registration_status?: string | null
+          terms_accepted?: boolean | null
+          business_email?: string
+          country?: string
+          email_verified?: boolean | null
+          organization_name?: string
+          registration_status?: string | null
+          terms_accepted?: boolean | null
+      issuer_submissions: {
+          compliance_status: Json | null
+          guardian_validation: Json | null
+          rejection_reason: string | null
+          review_stages: Json | null
+          reviewer_id: string | null
+          submission_date: string
+          compliance_status?: Json | null
+          guardian_validation?: Json | null
+          rejection_reason?: string | null
+          review_stages?: Json | null
+          reviewer_id?: string | null
+          submission_date?: string
+          compliance_status?: Json | null
+          guardian_validation?: Json | null
+          rejection_reason?: string | null
+          review_stages?: Json | null
+          reviewer_id?: string | null
+          submission_date?: string
+      issuer_verification_codes: {
+          code: string
+          expires_at: string
+          used: boolean | null
+          code: string
+          expires_at: string
+          used?: boolean | null
+          code?: string
+          expires_at?: string
+          used?: boolean | null
+      issuer_wallets: {
+          compliance_status: Json | null
+          is_verified: boolean | null
+          is_whitelisted: boolean | null
+          risk_score: number | null
+          wallet_address: string
+          wallet_type: Database["public"]["Enums"]["wallet_type"]
+          compliance_status?: Json | null
+          is_verified?: boolean | null
+          is_whitelisted?: boolean | null
+          risk_score?: number | null
+          wallet_address: string
+          wallet_type: Database["public"]["Enums"]["wallet_type"]
+          compliance_status?: Json | null
+          is_verified?: boolean | null
+          is_whitelisted?: boolean | null
+          risk_score?: number | null
+          wallet_address?: string
+          wallet_type?: Database["public"]["Enums"]["wallet_type"]
+      kyc_documents: {
+          document_type: string
+          document_url: string
+          verification_status: string
+          document_type: string
+          document_url: string
+          verification_status?: string
+          document_type?: string
+          document_url?: string
+          verification_status?: string
+      legal_agreements: {
+          agreement_type: string
+          content: string
+          title: string
+          version: string
+          agreement_type: string
+          content: string
+          title: string
+          version: string
+          agreement_type?: string
+          content?: string
+          title?: string
+          version?: string
+      notifications: {
+          is_read: boolean
+          message: string
+          title: string
+          is_read?: boolean
+          message: string
+          title: string
+          is_read?: boolean
+          message?: string
+          title?: string
+      onboarding_status: {
+          current_step: number
+          is_completed: boolean
+          current_step?: number
+          is_completed?: boolean
+          current_step?: number
+          is_completed?: boolean
+      organization_details: {
+          business_type: string
+          entity_structure: string
+          external_representatives: string | null
+          governance_model: string
+          is_regulated: boolean | null
+          issuer_type: string[]
+          jurisdiction: string
+          legal_name: string
+          registration_number: string | null
+          regulatory_details: Json | null
+          risk_classification: string
+          business_type: string
+          entity_structure: string
+          external_representatives?: string | null
+          governance_model: string
+          is_regulated?: boolean | null
+          issuer_type: string[]
+          jurisdiction: string
+          legal_name: string
+          registration_number?: string | null
+          regulatory_details?: Json | null
+          risk_classification: string
+          business_type?: string
+          entity_structure?: string
+          external_representatives?: string | null
+          governance_model?: string
+          is_regulated?: boolean | null
+          issuer_type?: string[]
+          jurisdiction?: string
+          legal_name?: string
+          registration_number?: string | null
+          regulatory_details?: Json | null
+          risk_classification?: string
+      organization_directors: {
+          address_proof_url: string | null
+          full_name: string
+          organization_id: string | null
+          passport_url: string | null
+          position: string
+          verification_status: string | null
+          address_proof_url?: string | null
+          full_name: string
+          organization_id?: string | null
+          passport_url?: string | null
+          position: string
+          verification_status?: string | null
+          address_proof_url?: string | null
+          full_name?: string
+          organization_id?: string | null
+          passport_url?: string | null
+          position?: string
+          verification_status?: string | null
+            foreignKeyName: "organization_directors_organization_id_fkey"
+            columns: ["organization_id"]
+            referencedRelation: "issuer_profiles"
+      organization_documents: {
+          document_type: Database["public"]["Enums"]["document_type"]
+          file_name: string
+          file_size: number
+          file_url: string
+          mime_type: string
+          organization_id: string | null
+          verification_notes: string | null
+          verification_status: string | null
+          verified_at: string | null
+          verified_by: string | null
+          document_type: Database["public"]["Enums"]["document_type"]
+          file_name: string
+          file_size: number
+          file_url: string
+          mime_type: string
+          organization_id?: string | null
+          verification_notes?: string | null
+          verification_status?: string | null
+          verified_at?: string | null
+          verified_by?: string | null
+          document_type?: Database["public"]["Enums"]["document_type"]
+          file_name?: string
+          file_size?: number
+          file_url?: string
+          mime_type?: string
+          organization_id?: string | null
+          verification_notes?: string | null
+          verification_status?: string | null
+          verified_at?: string | null
+          verified_by?: string | null
+            foreignKeyName: "organization_documents_organization_id_fkey"
+            columns: ["organization_id"]
+            referencedRelation: "issuer_profiles"
+      organization_shareholders: {
+          address_proof_url: string | null
+          full_name: string
+          organization_id: string | null
+          ownership_percentage: number
+          passport_url: string | null
+          verification_status: string | null
+          address_proof_url?: string | null
+          full_name: string
+          organization_id?: string | null
+          ownership_percentage: number
+          passport_url?: string | null
+          verification_status?: string | null
+          address_proof_url?: string | null
+          full_name?: string
+          organization_id?: string | null
+          ownership_percentage?: number
+          passport_url?: string | null
+          verification_status?: string | null
+            foreignKeyName: "organization_shareholders_organization_id_fkey"
+            columns: ["organization_id"]
+            referencedRelation: "issuer_profiles"
+      risk_assessments: {
+          assessment_date: string
+          next_review_date: string | null
+          organization_id: string | null
+          required_approvals: Json | null
+          risk_factors: Json | null
+          risk_type: string
+          assessment_date?: string
+          next_review_date?: string | null
+          organization_id?: string | null
+          required_approvals?: Json | null
+          risk_factors?: Json | null
+          risk_type: string
+          assessment_date?: string
+          next_review_date?: string | null
+          organization_id?: string | null
+          required_approvals?: Json | null
+          risk_factors?: Json | null
+          risk_type?: string
+            foreignKeyName: "risk_assessments_organization_id_fkey"
+            columns: ["organization_id"]
+            referencedRelation: "organization_details"
+      rules: {
+          created_by: string
+          rule_details: Json
+          rule_id: string
+          rule_name: string
+          rule_type: string
+          status: Database["public"]["Enums"]["rule_status"] | null
+          created_by: string
+          rule_details?: Json
+          rule_id?: string
+          rule_name: string
+          rule_type: string
+          status?: Database["public"]["Enums"]["rule_status"] | null
+          created_by?: string
+          rule_details?: Json
+          rule_id?: string
+          rule_name?: string
+          rule_type?: string
+          status?: Database["public"]["Enums"]["rule_status"] | null
+      spv_directors: {
+          address_proof_url: string | null
+          full_name: string
+          passport_url: string | null
+          position: string
+          spv_id: string
+          verification_status:
+            | Database["public"]["Enums"]["verification_status"]
+            | null
+          address_proof_url?: string | null
+          full_name: string
+          passport_url?: string | null
+          position: string
+          spv_id: string
+          verification_status?:
+            | Database["public"]["Enums"]["verification_status"]
+            | null
+          address_proof_url?: string | null
+          full_name?: string
+          passport_url?: string | null
+          position?: string
+          spv_id?: string
+          verification_status?:
+            | Database["public"]["Enums"]["verification_status"]
+            | null
+            foreignKeyName: "spv_directors_spv_id_fkey"
+            columns: ["spv_id"]
+            referencedRelation: "spv_entities"
+      spv_documents: {
+          document_type: string
+          document_url: string
+          spv_id: string
+          verification_status:
+            | Database["public"]["Enums"]["verification_status"]
+            | null
+          verified_at: string | null
+          document_type: string
+          document_url: string
+          spv_id: string
+          verification_status?:
+            | Database["public"]["Enums"]["verification_status"]
+            | null
+          verified_at?: string | null
+          document_type?: string
+          document_url?: string
+          spv_id?: string
+          verification_status?:
+            | Database["public"]["Enums"]["verification_status"]
+            | null
+          verified_at?: string | null
+            foreignKeyName: "spv_documents_spv_id_fkey"
+            columns: ["spv_id"]
+            referencedRelation: "spv_entities"
+      spv_entities: {
+          issuer_id: string
+          jurisdiction: string
+          registration_number: string | null
+          structure_type: string
+          issuer_id: string
+          jurisdiction: string
+          registration_number?: string | null
+          structure_type: string
+          issuer_id?: string
+          jurisdiction?: string
+          registration_number?: string | null
+          structure_type?: string
+            foreignKeyName: "spv_entities_issuer_id_fkey"
+            columns: ["issuer_id"]
+            referencedRelation: "issuer_profiles"
+      spv_shareholders: {
+          address_proof_url: string | null
+          full_name: string
+          ownership_percentage: number
+          passport_url: string | null
+          spv_id: string
+          verification_status:
+            | Database["public"]["Enums"]["verification_status"]
+            | null
+          address_proof_url?: string | null
+          full_name: string
+          ownership_percentage: number
+          passport_url?: string | null
+          spv_id: string
+          verification_status?:
+            | Database["public"]["Enums"]["verification_status"]
+            | null
+          address_proof_url?: string | null
+          full_name?: string
+          ownership_percentage?: number
+          passport_url?: string | null
+          spv_id?: string
+          verification_status?:
+            | Database["public"]["Enums"]["verification_status"]
+            | null
+            foreignKeyName: "spv_shareholders_spv_id_fkey"
+            columns: ["spv_id"]
+            referencedRelation: "spv_entities"
+      submission_notifications: {
+          message: string
+          notification_type: string
+          submission_id: string | null
+          message: string
+          notification_type: string
+          submission_id?: string | null
+          message?: string
+          notification_type?: string
+          submission_id?: string | null
+            foreignKeyName: "submission_notifications_submission_id_fkey"
+            columns: ["submission_id"]
+            referencedRelation: "issuer_submissions"
+          amount: number
+          confirmed_at: string | null
+          investor_id: string | null
+          status: string | null
+          amount: number
+          confirmed_at?: string | null
+          investor_id?: string | null
+          status?: string | null
+          amount?: number
+          confirmed_at?: string | null
+          investor_id?: string | null
+          status?: string | null
+          allocation_id: string
+          amount: number
+          confirmed_at: string | null
+          distributed_at: string | null
+          status: string | null
+          subscription_id: string | null
+          allocation_id?: string
+          amount: number
+          confirmed_at?: string | null
+          distributed_at?: string | null
+          status?: string | null
+          subscription_id?: string | null
+          allocation_id?: string
+          amount?: number
+          confirmed_at?: string | null
+          distributed_at?: string | null
+          status?: string | null
+          subscription_id?: string | null
+            foreignKeyName: "token_allocations_subscription_id_fkey"
+            referencedColumns: ["subscription_id"]
+      user_2fa: {
+          backup_codes: string[]
+          is_enabled: boolean | null
+          secret: string
+          backup_codes: string[]
+          is_enabled?: boolean | null
+          secret: string
+          backup_codes?: string[]
+          is_enabled?: boolean | null
+          secret?: string
+      user_agreements: {
+          agreement_id: string
+          signature: string
+          signed_at: string
+          agreement_id: string
+          signature: string
+          signed_at?: string
+          agreement_id?: string
+          signature?: string
+          signed_at?: string
+            foreignKeyName: "user_agreements_agreement_id_fkey"
+            columns: ["agreement_id"]
+            referencedRelation: "legal_agreements"
+      user_invites: {
+          expires_at: string
+          token: string
+          used_at: string | null
+          expires_at: string
+          token: string
+          used_at?: string | null
+          expires_at?: string
+          token?: string
+          used_at?: string | null
+      user_verifications: {
+          expires_at: string
+          verification_code: string
+          verification_type: string
+          verified: boolean | null
+          expires_at: string
+          verification_code: string
+          verification_type: string
+          verified?: boolean | null
+          expires_at?: string
+          verification_code?: string
+          verification_type?: string
+          verified?: boolean | null
+      users: {
+          invite_sent_at: string | null
+          public_key: string | null
+          invite_sent_at?: string | null
+          public_key?: string | null
+          invite_sent_at?: string | null
+          public_key?: string | null
+      wallet_policies: {
+          is_active: boolean | null
+          rules: Json
+          is_active?: boolean | null
+          rules: Json
+          is_active?: boolean | null
+          rules?: Json
+      wallet_signatories: {
+          email: string | null
+          required_confirmations: number | null
+          signatory_address: string
+          wallet_id: string | null
+          email?: string | null
+          required_confirmations?: number | null
+          signatory_address: string
+          wallet_id?: string | null
+          email?: string | null
+          required_confirmations?: number | null
+          signatory_address?: string
+          wallet_id?: string | null
+            foreignKeyName: "wallet_signatories_wallet_id_fkey"
+            columns: ["wallet_id"]
+            referencedRelation: "issuer_wallets"
+      wallet_transactions: {
+          amount: number | null
+          compliance_checks: Json | null
+          token_id: string | null
+          transaction_type: string
+          wallet_id: string
+          amount?: number | null
+          compliance_checks?: Json | null
+          token_id?: string | null
+          transaction_type: string
+          wallet_id: string
+          amount?: number | null
+          compliance_checks?: Json | null
+          token_id?: string | null
+          transaction_type?: string
+          wallet_id?: string
+            foreignKeyName: "wallet_transactions_wallet_id_fkey"
+            columns: ["wallet_id"]
+            referencedRelation: "investor_wallets"
+      whitelisted_wallets: {
+          added_by: string
+          compliance_rule_id: string
+          wallet_address: string
+          added_by: string
+          compliance_rule_id: string
+          wallet_address: string
+          added_by?: string
+          compliance_rule_id?: string
+          wallet_address?: string
+            foreignKeyName: "whitelisted_wallets_compliance_rule_id_fkey"
+            columns: ["compliance_rule_id"]
+            referencedRelation: "compliance_rules"
+      accreditation_status: "pending" | "verified" | "failed"
+      document_type:
+        | "incorporation_cert"
+        | "memorandum"
+        | "regulatory_license"
+        | "director_list"
+        | "director_passport"
+        | "director_address"
+        | "shareholder_register"
+        | "shareholder_passport"
+        | "shareholder_address"
+        | "financial_statements"
+        | "qualification_summary"
+        | "business_description"
+        | "org_chart"
+        | "key_people_cv"
+        | "aml_kyc_description"
+      investor_status: "pending" | "active" | "suspended"
+      investor_type: "individual" | "institutional"
+      kyc_status: "pending" | "verified" | "failed"
+      rule_status: "active" | "inactive"
+      verification_status: "pending" | "verified" | "rejected"
+      wallet_type: "integrated" | "external"
+          accreditation_status: string | null
+          wallet: string
+          accreditation_status?: string | null
+          wallet: string
+          accreditation_status?: string | null
+          wallet?: string
+            referencedRelation: "investor_subscriptions_view"
+      investor_subscriptions_view: {
+          allocated: boolean | null
+          confirmed: boolean | null
+          currency: string | null
+          distributed: boolean | null
+          fiat_amount: number | null
+          investor_email: string | null
+          investor_name: string | null
+          investor_type: string | null
+          kyc_status: string | null
+          token_amount: number | null
+          token_type: string | null
+          wallet: string | null

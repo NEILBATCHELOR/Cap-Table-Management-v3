@@ -8,6 +8,10 @@ import TokenBuilder from "./components/tokens/TokenBuilder";
 import TokenAdministration from "./components/tokens/TokenAdministration";
 import MainLayout from "./components/layout/MainLayout";
 import CapTableManagerNew from "./components/captable/CapTableManagerNew";
+import RuleManagementDashboard from "./components/rules/RuleManagementDashboard"; // Import rule management component
+import RoleManagementDashboard from "./components/UserManagement/RoleManagementDashboard"; // Import Role Management
+
+
 import routes from "tempo-routes";
 
 function App() {
@@ -98,6 +102,8 @@ function App() {
             />
 
             {/* Other routes */}
+            <Route path="/rule-management" element={<RuleManagementDashboard />} />
+    		<Route path="/role-management" element={<RoleManagementDashboard />} />
             <Route path="/investors" element={<InvestorsList />} />
             <Route path="/reports" element={<ReportsDashboard />} />
             <Route
